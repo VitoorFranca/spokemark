@@ -1,0 +1,1 @@
+One more thing before we wrap up. The customer support team reported a spike in tickets about invoices. It looks like the tax field is calculated twice when the user changes the billing country. Please treat this as a high priority bug.

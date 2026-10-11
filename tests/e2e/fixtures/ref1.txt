@@ -1,0 +1,2 @@
+Good morning everyone, and thank you for joining the weekly planning meeting. Today we will review the progress on the mobile application, discuss the new onboarding flow, and agree on the priorities for the next sprint.
+The design team finished the first version of the prototype last Friday. Users found the navigation clear, but several people asked for a simpler way to reset their password. We should address that before the public release in November.

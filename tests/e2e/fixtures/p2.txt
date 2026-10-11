@@ -1,0 +1,1 @@
+Let's start with the budget. Last quarter we spent less than expected on cloud infrastructure, mostly because we moved the batch jobs to cheaper instances at night. Marketing, on the other hand, went slightly over, so we need to rebalance before December.

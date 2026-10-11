@@ -1,0 +1,1 @@
+Can everyone hear me? I think my microphone was muted for a second. Okay, great. So the main question is whether we ship the new search feature this week or wait for the performance fixes. My recommendation is to wait, because the results page is still too slow on older phones.

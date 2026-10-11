@@ -1,0 +1,49 @@
+{
+ "gapMs": 300,
+ "turnAfterWord": [
+  10,
+  23,
+  35,
+  44,
+  55,
+  66
+ ],
+ "nWords": 73,
+ "turns": [
+  {
+   "speaker": "A",
+   "start": 0.0,
+   "end": 2.837
+  },
+  {
+   "speaker": "B",
+   "start": 3.137,
+   "end": 7.194
+  },
+  {
+   "speaker": "D",
+   "start": 7.494,
+   "end": 11.749
+  },
+  {
+   "speaker": "A",
+   "start": 12.049,
+   "end": 14.542
+  },
+  {
+   "speaker": "D",
+   "start": 14.842,
+   "end": 18.664
+  },
+  {
+   "speaker": "B",
+   "start": 18.964,
+   "end": 22.25
+  },
+  {
+   "speaker": "A",
+   "start": 22.55,
+   "end": 25.084
+  }
+ ]
+}

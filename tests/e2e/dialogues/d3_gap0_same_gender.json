@@ -1,0 +1,43 @@
+{
+ "gapMs": 0,
+ "turnAfterWord": [
+  8,
+  19,
+  32,
+  42,
+  48
+ ],
+ "nWords": 54,
+ "turns": [
+  {
+   "speaker": "A",
+   "start": 0.0,
+   "end": 1.881
+  },
+  {
+   "speaker": "C",
+   "start": 1.881,
+   "end": 5.735
+  },
+  {
+   "speaker": "A",
+   "start": 5.735,
+   "end": 8.913
+  },
+  {
+   "speaker": "C",
+   "start": 8.913,
+   "end": 12.639
+  },
+  {
+   "speaker": "A",
+   "start": 12.639,
+   "end": 14.298
+  },
+  {
+   "speaker": "C",
+   "start": 14.298,
+   "end": 17.224
+  }
+ ]
+}

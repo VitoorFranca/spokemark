@@ -1,0 +1,1 @@
+Did you have a chance to look at the new dashboard? Yes, I checked it this morning. The charts load much faster now. Great. Did you notice any problems with the filters? Only one. The date filter resets when you change the page. Okay, I will open a ticket for that. Thanks. I can review the fix tomorrow.

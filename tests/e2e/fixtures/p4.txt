@@ -1,0 +1,1 @@
+Thanks, that makes sense. I can take the action item to talk to the database team tomorrow morning. If they can add the missing index, we should see the response time drop below two hundred milliseconds, which is our target for the launch.
