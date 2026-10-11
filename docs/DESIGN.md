@@ -1,62 +1,61 @@
-# Decisões de design (redesign Spokemark)
+# Design decisions
 
-Cada item traz o que foi escolhido, as alternativas descartadas e o motivo. As medições foram feitas no MacBook Air M4 com macOS 26.6.2.
+What was chosen, what was discarded, and why. Measurements: MacBook Air M4, macOS 26.6.2.
 
-## Estrutura de produto
+## Product structure
 
-- **O painel da barra de menus é a superfície principal**, porque resolve o uso diário: ligar e desligar, ver o que está sendo captado e ajustar o essencial. O que é de consulta (transcrição ampla e histórico) fica na janela principal, e o que é de configuração fica na janela de Configurações. Descartado: manter o menu nativo do Tray, que não mostra estado, prévia nem erros acionáveis.
-- **Uma ação primária por tela.** No painel é Iniciar/Parar, exceto quando um card (modelo ausente ou modelo corrompido) traz a ação que destrava o uso; nesse caso o botão grande fica neutro e desativado. Na aba Transcrição, "Usar" é secundário.
-- **Erros dizem o que aconteceu e o que fazer.** As falhas técnicas são classificadas em `model`, `capture` ou `unknown`, e cada tipo tem um texto em pt-BR/en e uma ação. Modelo que falha ao carregar ganha "Baixar de novo", que apaga e baixa de novo. A mensagem técnica fica só no tooltip e nos logs.
-- **Nada de placeholders:** não há "Em breve" nem controle morto. Busca e "Apagar…" somem quando o histórico está vazio. O idioma falado aparece como informação ("Inglês"), não como um seletor com uma única opção.
+- **The menu bar panel is the primary surface.** It covers daily use: start/stop, what is being captured, and the essential controls. Reading (large transcript, history) lives in the main window; configuration in Settings. Discarded: a native tray menu only — it can't show state, a preview or actionable errors.
+- **One primary action per screen.** In the panel it is Start/Stop, unless a card (missing or broken model) holds the action that unblocks the user; then the big button becomes neutral and disabled. In Settings → Transcription, "Use" is a secondary button.
+- **Errors say what happened and what to do.** Failures are classified as `model`, `capture` or `unknown`, each with a localized message and an action ("Download again" deletes and re-downloads a model that failed to load). The technical message only appears in the tooltip and logs.
+- **No placeholders.** No "coming soon", no dead controls: search and "Delete…" disappear while history is empty; the spoken language is shown as information ("English"), not as a one-option picker.
 
-## Sensação nativa
+## Native feel
 
-- **Vibrancy:** `popover` no painel, `sidebar` na janela principal e `titlebar` na toolbar das Configurações. As áreas de conteúdo pintam `--bg` sólido, e as superfícies sobre vibrancy usam vidro translúcido (`--glass`).
-- **Semáforos:** `titleBarStyle: 'hiddenInset'` com `trafficLightPosition` alinhado ao conteúdo. Toolbar e cabeçalhos são `-webkit-app-region: drag`, e os controles dentro deles são `no-drag`.
-- **Comportamento de interface:** sem seleção de texto na interface (só as transcrições são selecionáveis), sem cursor de mão e com foco visível só para teclado. O foco programático usa `focusVisible: false`, e o título de cada passo do onboarding recebe foco para o VoiceOver, sem anel.
-- **Menu do app completo,** com os atalhos padrão: ⌘, (Configurações), ⌘W, ⌘Q, ⌘F (busca no histórico) e ⌘0 (janela principal).
-- **Tema:** o `prefers-color-scheme` **não acompanha** o `nativeTheme.themeSource` nos renderers deste Electron. Isso foi medido com Playwright: o main dizia `shouldUseDarkColors: true` e o renderer via `matches: false`.
-  - **Solução:** o main é a fonte da verdade. Ele envia `dark` no estado, o renderer aplica `data-theme` no `<html>`, e o primeiro quadro já sai certo porque o preload lê o tema de forma síncrona uma vez.
-  - **Cor de destaque:** usamos o destaque próprio da marca, e não o do sistema, para manter a identidade e um contraste AA verificado.
+- **Vibrancy:** `popover` (panel), `sidebar` (main window), `titlebar` (Settings toolbar). Content areas paint a solid `--bg`; surfaces on vibrancy use translucent glass (`--glass`) and a brand tint (`--chrome-tint`).
+- **Traffic lights:** `titleBarStyle: 'hiddenInset'` with `trafficLightPosition` aligned to the content; toolbars and headers are `-webkit-app-region: drag`, their controls `no-drag`.
+- **Interface behavior:** no text selection in UI chrome (only transcripts are selectable), no hand cursor, focus ring for keyboard only. Programmatic focus uses `focusVisible: false`; each onboarding step heading receives focus for VoiceOver without a ring.
+- **Full app menu** with standard shortcuts: ⌘, (Settings), ⌘W, ⌘Q, ⌘F (history search), ⌘0 (main window).
+- **Theme:** Chromium's `prefers-color-scheme` does **not** follow `nativeTheme.themeSource` in these renderers (measured with Playwright: main reported `shouldUseDarkColors: true`, the renderer `matches: false`). The main process is the source of truth: it sends `dark` in the state, renderers apply `data-theme` on `<html>`, and the first frame is right because the preload reads the theme synchronously once.
 
-## Painel
+## Panel lifecycle
 
-- **Ciclo de vida medido** (do clique até o painel pintado, 12 aberturas cada):
-  - **Pré-carregado permanente:** p50 de 42 ms, mas custa ~100–117 MB de renderer o tempo todo, o que leva o repouso de 376 para 503 MB.
-  - **Criado no clique:** p50 de 138–153 ms e p95 de 188–190 ms.
-  - **Escolhido, aquecido no hover:** o painel é criado no `mouse-enter` do ícone e destruído 60 s depois de fechado. Medido: **p50 de 47 ms e p95 de 59 ms** com hover, e 43 ms ao reabrir dentro de 60 s. Sem hover (a frio), o p50 é de 138 ms.
-- **Teclado:** ao abrir, o foco vai para o botão principal. Tab percorre todo o painel, o menu `⋯` funciona com as setas e Esc fecha.
-- **Medidor de nível:** só aparece e se mexe enquanto captura. Ele é alimentado pelo RMS calculado no main a ~15 Hz e enviado só para janelas visíveis.
+Measured open-to-paint (12 opens each):
 
-## Configurações
+| Strategy | p50 | p95 | Memory cost |
+|---|---|---|---|
+| Always preloaded | 42 ms | 61 ms | ~100–117 MB renderer, permanently (idle 376 → 503 MB) |
+| Created on click | 138–153 ms | 188–190 ms | none while closed |
+| **Chosen: warmed on hover**, destroyed 60 s after closing | **47 ms** | **59 ms** | none while closed |
 
-- **Prévia ao vivo:** é o mesmo componente (`CaptionBox`) e a mesma função de estilo (`captionCss`) usados pelo overlay, então o que aparece na prévia é o que o overlay renderiza. A animação de exemplo **toca uma vez** e repete só quando o estilo muda. Descartado: um loop contínuo, que viola a regra de "nenhuma animação em loop".
-- **Predefinições:** "Padrão", "Alto contraste" (peso 700, fundo a 92%) e "Cinema" (sem caixa, com contorno no texto). Aplicar uma predefinição ajusta fonte, tamanho e fundo, e cada valor continua ajustável depois.
-- **Modelos:** a velocidade relativa foi medida offline, como mediana de 5 inferências numa janela de 10 s: base-q5 149 ms, base 159 ms, small-q5 388 ms e small 430 ms. Para a precisão relativa, os nossos testes com fala limpa não separaram os modelos, então ela segue a ordem por tamanho do artigo do Whisper e **nenhum número de WER aparece na interface**.
-- **Atalhos configuráveis:** um gravador de teclas exige ⌘, ⌃ ou ⌥. Se o registro falhar (atalho já em uso), o campo fica vermelho com uma explicação.
+The panel is created on the menu bar icon's `mouse-enter`, so it is ready by the time of the click. Reopening within 60 s: 43 ms. Without hover (e.g., via shortcut): p50 138 ms.
 
-## Histórico
+**Keyboard:** focus goes to the main control on open; Tab reaches everything; the `⋯` menu uses arrow keys; Esc closes. **Level meter:** shown and moving only while capturing, fed by an RMS computed in main at ~15 Hz and sent only to visible windows.
 
-- **`node:sqlite` com FTS5,** que é o SQLite 3.53 embutido no Node 24 do Electron 44.
-  - Descartado `better-sqlite3`: é addon nativo, precisaria ser recompilado para o ABI do Electron e é uma dependência a mais.
-  - Descartado JSON com busca linear: não escala para meses de histórico.
-- **Escrita:** só palavras **confirmadas**, agrupadas em segmentos (pausa, troca de falante, 32 palavras ou 12 s) e gravadas **em lote a cada 2 s** numa transação. Sessão sem nenhuma palavra não é salva.
-- **Busca:** cada termo é tratado como prefixo entre aspas, o que é seguro contra a sintaxe do FTS. Os resultados mostram o trecho com o termo destacado.
-- **App de origem:** o `audiotap` lista os processos com `kAudioProcessPropertyIsRunningOutput` e sobe até o app "regular" pai (por exemplo, o processo de áudio do Chrome vira "Google Chrome"). A sessão guarda o app mais frequente.
+## Settings
+
+- **Live preview:** the same component (`CaptionBox`) and style function (`captionCss`) as the overlay, so the preview is exactly what the overlay renders. The sample animation **plays once** and replays only when the style changes. Discarded: a continuous loop (violates "no looping animation").
+- **Presets:** Standard, High contrast (weight 700, 92% background), Cinema (no box, outlined text). A preset sets font, size and background; each value stays adjustable.
+- **Models:** relative speed measured offline (median of 5 inferences on a 10 s window): base-q5 149 ms, base 159 ms, small-q5 388 ms, small 430 ms. Our clean-speech tests did not separate the models' accuracy, so relative accuracy follows model size (Whisper paper) and **no WER number is shown in the UI**.
+- **Configurable shortcuts:** a key recorder that requires ⌘, ⌃ or ⌥; if registration fails (shortcut in use) the field turns red with an explanation.
+
+## History
+
+- **Writes:** only **confirmed** words, grouped into segments (pause, speaker change, 32 words or 12 s) and written **in batches every 2 s** in one transaction. Sessions without words are not saved.
+- **Search:** each term becomes a quoted prefix (safe against FTS syntax); results show a snippet with the match highlighted.
+- **Source app:** `audiotap` lists processes with `kAudioProcessPropertyIsRunningOutput` and walks up to the "regular" parent app (Chrome's audio service → "Google Chrome"); a session keeps the most frequent one.
 
 ## Overlay
 
-- **Sem mudança de comportamento:** click-through, `type: 'panel'`, todos os Spaces e tela cheia continuam como antes. O estilo vem das predefinições.
-- **Modo de edição:** mostra uma borda sutil, uma alça no canto e a dica "Arraste para mover · Esc para concluir". A janela recebe foco só nesse modo, para o Esc funcionar.
+Behavior unchanged from the MVP (click-through, `type: 'panel'`, all Spaces, full screen); styles from the presets. Edit mode shows a subtle frame, a corner handle and the hint "Drag to move · Esc to finish"; the window takes focus only in this mode so Esc works. The overlay intentionally does **not** use brand colors: white on black is the most legible.
 
-## Verificação visual
+## Visual verification
 
-- **Capturas com `screencapture -l <CGWindowID>`** (o ID vem de `getMediaSourceId()`), em vez de `webContents.capturePage`. O `capturePage` captura só o conteúdo web, então as áreas com vibrancy saem transparentes e não representam o que o usuário vê.
-- **Estados não felizes reais,** sem mocks: modelo ausente (pasta vazia), download em andamento (download real) e erro (arquivo de modelo inválido). O card de **permissão negada** não foi capturado, porque exigiria revogar a permissão real do usuário.
+- Screenshots use `screencapture -l <CGWindowID>` (id from `getMediaSourceId()`) instead of `webContents.capturePage`, which only captures web content and leaves vibrant areas transparent.
+- Non-happy states are **real**, not mocked: model missing (empty models folder), downloading (a real download), error (an invalid model file). The *permission denied* card was not captured: it would require revoking the user's real permission.
 
-## Identidade (logo e cores)
+## Identity
 
-A paleta e os ícones derivam de `assets/logo.png`; veja `docs/BRAND.md`.
-- **No escuro:** azul-marinho nas superfícies e ciano como destaque. **No claro:** neutros frios e azul-elétrico.
-- **Vibrancy:** fica, porque é o comportamento nativo do macOS, mas recebe um tom da marca (`--chrome-tint`). Descartado: superfícies sólidas no lugar da vibrancy, porque perderiam a sensação nativa.
-- **Brilho da logo:** aparece só como sombra estática no botão principal enquanto o app ouve. Descartado: brilho animado ou pulsante, que viola a regra de "nenhuma animação em loop".
+Palette and icons derive from `assets/logo.png` — see [`BRAND.md`](BRAND.md).
+- Dark: navy surfaces with a cyan accent. Light: cool neutrals with electric blue.
+- Vibrancy stays (native behavior) with a brand tint. Discarded: replacing vibrancy with solid surfaces (loses the native feel).
+- The logo's glow appears only as a **static** shadow on the main button while listening. Discarded: an animated/pulsing glow (looping animation).

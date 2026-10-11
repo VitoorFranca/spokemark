@@ -1,73 +1,73 @@
-# Identidade visual — Spokemark
+# Brand — Spokemark
 
-## Nome: **Spokemark**
+> The Spokemark name, logo and visual identity are **not** covered by the MIT License. See [`TRADEMARKS.md`](../TRADEMARKS.md).
 
-*spoken* + *mark*: a marca do que foi dito. O nome foi escolhido amplo de propósito: serve para as legendas ao vivo de hoje e para a expansão planejada (transcrição de reuniões, histórico, atas), além de uma possível versão community open source.
+<p>
+<img src="../assets/brand/icon-512.png" width="96" alt="Spokemark app icon">&nbsp;
+<img src="../assets/brand/logo.svg" width="96" alt="Spokemark logo (vector)">
+</p>
 
-**Domínios em 11/10/2026**, consultados por RDAP (fonte oficial do registro; `404` significa não registrado):
-- **Fontes:** `spokemark.com` (Verisign) e `spokemark.app` (Google Registry).
-- **Resultado:** os dois estavam **livres**.
-- **Limite da checagem:** "Não registrado" não garante preço normal, porque o domínio pode ser reservado ou *premium*. É preciso confirmar num registrador antes de comprar.
-- **Conflito:** nenhum app ou produto com esse nome encontrado em busca na web. Não foi feita busca de marca registrada (INPI/USPTO).
+## Name: **Spokemark**
 
-**Histórico da escolha:**
-1. O primeiro nome proposto foi **Earline**, com `.app` livre e `.com` registrado. Foi descartado porque o `.com` não estava disponível.
-2. Na segunda rodada, ~130 candidatos foram testados com a exigência de `.com` **e** `.app` livres. Quase todo nome com palavra comum já tem o `.com` registrado.
-3. Passaram 8 nomes: Saidstone, Minuteloom, Wrenote, **Spokemark**, Quillear, Heardlight, Heardara e Larkscribe. Larkscribe tinha menção a um app de áudio com o mesmo nome; Minuteloom é próximo da marca Loom.
+*spoken* + *mark* — the mark of what was said. Deliberately broad: it fits today's live captions and the planned expansion (meeting transcription, history, minutes) as well as a possible community edition.
 
-**Onde o nome está no código:** numa constante única, `APP_NAME` em `src/shared/brand.ts`, que também define o nome do pacote, os textos, a pasta de dados e o menu.
-- **Bundle ID:** continua o do MVP, para preservar a permissão TCC já concedida.
-- **Pasta de dados:** as pastas de builds anteriores ("Earline" e "Live Captions") são migradas uma vez.
+**Domains on 2026-10-11**, checked through RDAP (the registries' official source; `404` means unregistered):
+- `spokemark.com` (Verisign) and `spokemark.app` (Google Registry) were both **unregistered**.
+- "Unregistered" does not guarantee a regular price — a name can be reserved or *premium*; confirm with a registrar before buying.
+- No app or product with this name was found in a web search. No trademark search (INPI/USPTO) was made.
+
+**How the name was chosen:**
+1. The first proposal, **Earline**, had a free `.app` but a registered `.com`, so it was dropped.
+2. ~130 candidates were then checked requiring **both** `.com` and `.app` free; almost every name built from common words already has its `.com` registered.
+3. Eight passed: Saidstone, Minuteloom, Wrenote, **Spokemark**, Quillear, Heardlight, Heardara, Larkscribe. Larkscribe had a mention of an audio app with the same name; Minuteloom is close to the Loom brand.
+
+**In code:** a single constant, `APP_NAME` in `src/shared/brand.ts`, drives the package name, UI text, data folder and menus.
+- **Bundle ID:** still the MVP's, to keep the TCC permission users already granted.
+- **Data folder:** folders from earlier builds ("Earline", "Live Captions") are migrated once.
 
 ## Logo
 
-**Fonte:** `assets/logo.png`, de 1254 px. A logo foi gerada por IA (ChatGPT), sem designer contratado e sem uso intencional de elementos de terceiros. Mostra um "S" em forma de balão de fala, em branco, gelo e ciano com brilho, sobre um squircle azul-elétrico e fundo azul-marinho.
+**Source:** `assets/logo.png` (1254 px), generated with AI (ChatGPT), without a hired designer and without intentional use of third-party elements. A speech-bubble "S" in white, ice and cyan with a glow, on an electric-blue squircle over navy.
 
-**Uso:** a licença MIT do código **não** se aplica ao nome, à logo nem à identidade visual. Veja [`TRADEMARKS.md`](../TRADEMARKS.md).
+### Derived assets
 
-### Derivados gerados a partir da logo
-
-| Arquivo | Como é gerado | Uso |
+| File | How it is made | Used for |
 |---|---|---|
-| `build/macos/icon.icns` (128 a 1024 px) | **PNG original**, recortado com squircle de cantos contínuos (superelipse n=5) e posicionado na grade de 824/1024 do macOS | Ícone do app |
-| `build/macos/icon.icns` (16 e 32 px) | `logo.svg` | Nos tamanhos pequenos, o brilho do original vira borrão; o vetor fica nítido |
-| `src/renderer/public/icon.png` | PNG original recortado, 512 px | Logo dentro do app (painel, onboarding, Sobre, sidebar) |
-| `assets/brand/glyph.svg` | Glifo vetorizado com `potrace` a partir do PNG (pixels claros: verde > 140, dentro do squircle) | Base dos vetores abaixo |
-| `assets/brand/logo.svg` | **Recriação** vetorial, com gradientes e brilho aproximados; não é cópia exata | Tamanhos pequenos, web e documentação |
-| `assets/tray/*Template.png` | `tray-idle.svg` (glifo sólido) e `tray-listening.svg` (glifo com ponto indicador), em 18 pt @1x/@2x | Barra de menus (*template images* monocromáticas) |
+| `build/macos/icon.icns` (128–1024 px) | the **original PNG**, clipped with a continuous-corner squircle (superellipse n=5) on the macOS 824/1024 grid | app icon |
+| `build/macos/icon.icns` (16, 32 px) | `logo.svg` | at small sizes the original's glow turns to blur; the vector stays crisp |
+| `src/renderer/public/icon.png`, `assets/brand/icon-512.png` | the original PNG, clipped, 512 px | logo inside the app (panel, onboarding, About, sidebar) and in the docs |
+| `assets/brand/glyph.svg` | the glyph vectorized with `potrace` from the PNG (bright pixels: green > 140, inside the squircle) | base of the vectors below |
+| `assets/brand/logo.svg` | a vector **recreation** with approximate gradients and glow — not an exact copy | small sizes, web, docs |
+| `assets/tray/*Template.png` | `tray-idle.svg` (solid glyph) and `tray-listening.svg` (glyph + indicator dot), 18 pt @1x/@2x | menu bar (monochrome template images) |
 
-**Regerar:** `scripts/brand/vectorize-logo.sh`, depois `npx electron scripts/render-icons.cjs`. O pipeline é reproduzível: a saída é idêntica byte a byte aos arquivos versionados.
+**Regenerate:** `scripts/brand/vectorize-logo.sh`, then `npx electron scripts/render-icons.cjs`. The pipeline is reproducible: its output is byte-identical to the committed files.
 
-## Cores (derivadas da logo)
+## Colors (from the logo)
 
-Amostradas nos pixels da logo:
-- **Azul-marinho:** `#00061E` / `#012478`
-- **Azul-elétrico:** `#1658FA` / `#0034BE`
-- **Ciano:** `#18D2FD`
-- **Gelo:** `#BBECFD`
+Sampled from the logo's pixels: navy `#00061E` / `#012478`, electric blue `#1658FA` / `#0034BE`, cyan `#18D2FD`, ice `#BBECFD`.
 
-| Token | Claro | Escuro | Uso |
+| Token | Light | Dark | Use |
 |---|---|---|---|
-| `--bg` | `#F5F6FA` (neutro frio) | `#0A0F1F` (marinho) | fundo das janelas |
-| `--surface` / `--surface-2` | `#FFFFFF` / `#ECEEF5` | `#121A30` / `#1A2440` | cards e áreas recuadas |
-| `--text` | `#0D1326` (17:1) | `#EAF0FB` (16,7:1) | texto primário |
-| `--text-2` | `#566079` (5,8:1) | `#9AA7C2` (7,9:1) | texto secundário |
-| `--accent` | `#1658FA`, azul-elétrico (texto branco 5,5:1) | `#18D2FD`, ciano (10,6:1; texto marinho 10,3:1) | ação primária, seleção, foco |
-| `--signal` | `#0789B8` (3,7:1, gráfico) | `#18D2FD` | estado "ouvindo", medidor de nível |
-| `--success` / `--warning` / `--danger` | `#0F7A50` / `#9A5A00` / `#C42B1F` | `#3FD49A` / `#F2B84B` / `#FF7A6E` | estados (todos ≥ 4,5:1 nas superfícies) |
-| `--chrome-tint` | gelo a 35% | marinho a 55% | tinge a vibrancy do sistema na cor da marca (painel, sidebar, toolbar) |
-| `--glow` | sombra azul | contorno ciano com sombra azul | brilho **estático** no botão principal enquanto ouve, que remete ao brilho da logo |
+| `--bg` | `#F5F6FA` (cool neutral) | `#0A0F1F` (navy) | window background |
+| `--surface` / `--surface-2` | `#FFFFFF` / `#ECEEF5` | `#121A30` / `#1A2440` | cards, inset areas |
+| `--text` | `#0D1326` (17:1) | `#EAF0FB` (16.7:1) | primary text |
+| `--text-2` | `#566079` (5.8:1) | `#9AA7C2` (7.9:1) | secondary text |
+| `--accent` | `#1658FA` electric blue (white text 5.5:1) | `#18D2FD` cyan (10.6:1; navy text on it 10.3:1) | primary action, selection, focus |
+| `--signal` | `#0789B8` (3.7:1, graphic) | `#18D2FD` | "listening" state, level meter |
+| `--success` / `--warning` / `--danger` | `#0F7A50` / `#9A5A00` / `#C42B1F` | `#3FD49A` / `#F2B84B` / `#FF7A6E` | states (all ≥ 4.5:1 on surfaces) |
+| `--chrome-tint` | ice at 35% | navy at 55% | tints the system vibrancy toward the brand (panel, sidebar, toolbar) |
+| `--glow` | blue shadow | cyan outline + blue shadow | **static** glow on the main button while listening, echoing the logo |
 
-- **Contraste:** calculado com a fórmula WCAG 2.x. Os tokens ficam em `src/renderer/shared/tokens.css`.
-- **Raios:** 6, 10 e 14 px. **Transições:** 180 ms.
-- **Overlay:** **não** usa a cor da marca. Mantém branco sobre preto por legibilidade.
-- **Azul é a cor padrão do macOS:** a identidade se diferencia pelo ciano (estado ativo) e pelo marinho (tema escuro).
+- Contrast computed with the WCAG 2.x formula; tokens live in `src/renderer/shared/tokens.css`.
+- Radii 6 / 10 / 14 px; transitions 180 ms.
+- The **overlay does not use brand colors**: white on black for legibility.
+- Blue is macOS's default accent; the identity stands apart through cyan (active state) and navy (dark theme).
 
-## Tipografia
+## Typography
 
-- **Interface:** a fonte do sistema (`-apple-system`, que é o SF Pro).
-- **Legendas:** configuráveis entre Sistema (SF Pro), Arredondada (SF Pro Rounded), Serifada (New York) e Monoespaçada (SF Mono). O padrão é Sistema em peso médio, que tem alta legibilidade em tamanho grande.
+- **UI:** the system font (`-apple-system`, i.e. SF Pro).
+- **Captions:** System (SF Pro), Rounded (SF Pro Rounded), Serif (New York) or Monospaced (SF Mono). Default: System, medium weight — highly legible at large sizes.
 
-## Ícones de interface
+## UI icons
 
-A biblioteca é **Lucide** (`lucide-react`), com traço de 1,75 px em 16 a 18 px, importada por ícone (tree-shaking). Não usamos SF Symbols.
+**Lucide** (`lucide-react`), 1.75 px stroke at 16–18 px, imported per icon (tree-shaken). SF Symbols are not embedded.

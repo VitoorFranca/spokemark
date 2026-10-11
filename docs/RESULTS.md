@@ -1,96 +1,121 @@
-# Resultados medidos
+# Measured results
 
-Ambiente: MacBook Air M4 com 16 GB, macOS 26.6.2, Electron 44.7.0 e whisper.cpp v1.9.5 com Metal. Os números abaixo foram medidos nesta máquina; o que não foi medido está marcado.
+Environment: MacBook Air M4 (16 GB), macOS 26.6.2, Electron 44.7.0, whisper.cpp v1.9.5 with Metal. Every number below was measured on this machine; anything not measured is listed under *Not verified*.
 
-Todo o áudio foi tocado pela saída real do sistema (`afplay`, `say` ou Chrome) e capturado pelo Process Tap. Os textos de referência são falas sintéticas do macOS (`say`) e o `jfk.wav`, que é fala humana real de domínio público, vindo dos samples do whisper.cpp.
+All audio was played through the **real system output** (`afplay`, `say` or a browser) and captured by the Process Tap. Reference texts are synthetic macOS voices (`say`) and `jfk.wav`, real public-domain human speech from the whisper.cpp samples.
 
-## Fase 1: captura
+## 1. Capture
 
-| Teste | Resultado |
+| Test | Result |
 |---|---|
-| `afplay` de fala em inglês, 10 s gravados em WAV | 48 000 Hz, 2 canais, float32 intercalado, RMS 0,163 (−15,8 dBFS) |
-| Vídeo no Chrome (YouTube), 10 s | RMS 0,0565 (−25,0 dBFS) |
-| Sem permissão TCC | RMS 0 (zeros digitais), e o evento `silent-since-start` foi emitido |
-| Áudio continua audível durante a captura | Confirmado pelo usuário |
-| Prompt de permissão no app empacotado | Apareceu, e o usuário clicou em "Permitir" |
-| Relógio captura → main | ~32 ms (p50 e p95), latência de entrega do tap |
+| `afplay` English speech, 10 s recorded to WAV | 48,000 Hz, 2 channels, interleaved float32, RMS 0.163 (−15.8 dBFS) |
+| Video in Chrome (YouTube), 10 s | RMS 0.0565 (−25.0 dBFS) |
+| Without the TCC permission | RMS 0 (digital zeros); `silent-since-start` emitted |
+| Playback stays audible while capturing | confirmed by the user |
+| Permission prompt in the packaged app | shown; the user clicked "Allow" |
+| Capture → main clock | ~32 ms (p50 and p95), the tap's delivery latency |
 
-## Fase 2: transcrição (harness headless `dist/cli/transcribe.js`, mesmos módulos do app)
+## 2. Transcription (headless harness `dist/cli/transcribe.js`, same modules as the app)
 
-A latência aqui vai da captura da última amostra da palavra até o resultado chegar no main, sem a renderização.
+Latency here is from the capture of a word's last sample to the result arriving in main (no rendering).
 
-| Teste | base.en | small.en |
+| Test | base.en | small.en |
 |---|---|---|
-| Referência de 75 palavras com pausa de 5 s: WER | 0% | 1,3% (1 deleção) |
-| Inferência p50 / p95 | 179 / 243 ms | 338 / 423 ms |
-| Primeira aparição da palavra, p50 / p95 | 527 / 1204 ms | 491 / 1187 ms |
-| Confirmação (LocalAgreement), p50 / p95 | 946 / 1556 ms | 934 / 1493 ms |
-| `jfk.wav` (fala humana real): WER | 0% | não medido |
-| 45 s de silêncio | 0 palavras e 0 inferências | não medido |
+| 75-word reference with a 5 s pause: WER | 0 % | 1.3 % (1 deletion) |
+| Inference p50 / p95 | 179 / 243 ms | 338 / 423 ms |
+| First appearance of a word, p50 / p95 | 527 / 1204 ms | 491 / 1187 ms |
+| Confirmation (LocalAgreement), p50 / p95 | 946 / 1556 ms | 934 / 1493 ms |
+| `jfk.wav` (real human speech): WER | 0 % | not measured |
+| 45 s of silence | 0 words, 0 inferences | not measured |
 
-Com dedup só por timestamp (a primeira versão), a WER do mesmo teste foi de 5,3%.
+With timestamp-only dedup (the first version) the same reference had a WER of 5.3 %.
 
-**Depois da correção do fim de frase (código final), com base.en:**
-- **Referência:** 3 execuções, WER de 1,3%, 0% e 0%. Primeira aparição com p50 de 392, 481 e 565 ms e p95 de 1230, 1133 e 1207 ms. Confirmação com p50 de 927 a 968 ms e p95 de 1413 a 1490 ms.
-- **`jfk.wav`:** WER 0%.
-- **45 s de silêncio:** 0 palavras e 0 inferências.
+**After the end-of-utterance fix (final pipeline), base.en:** reference, 3 runs: WER 1.3 %, 0 %, 0 %; first appearance p50 392 / 481 / 565 ms, p95 1230 / 1133 / 1207 ms; confirmation p50 927–968 ms, p95 1413–1490 ms. `jfk.wav`: 0 %. 45 s of silence: 0 words, 0 inferences.
 
-## App empacotado (`Live Captions.app`, assinatura ad hoc)
+**Offline inference per model** (10 s window, median of 5, no playback): base.en-q5_1 149 ms, base.en 159 ms, small.en-q5_1 388 ms, small.en 430 ms. The portable release build (`GGML_NATIVE=OFF`, built on the GitHub runner) measured 160 ms for base.en.
 
-A latência aqui vai da captura da última amostra até o overlay pintado: o renderer confirma depois do `requestAnimationFrame`.
+## 3. Packaged app
 
-### Sessão de 30 min com base.en, build final
+Latency here is from the capture of a word's last sample to the **overlay painted** (the renderer acknowledges after `requestAnimationFrame`).
 
-Playlist em loop: 6 falas e 5 vozes, pausas de 1 a 10 s e 60 s de silêncio por volta. Métricas amostradas a cada minuto (32 amostras).
+### 30-minute session, base.en (MVP UI, final pipeline)
 
-- **Latência na tela:** mediana dos p50 por minuto de 446 ms e dos p95 de 1312 ms. O pior minuto teve p95 de 2104 ms.
-- **WER:** 2,3% em 2750 palavras. Por arquivo: ref1 0,4%, p2 2,1%, p3 2,4%, p4 7,2% (voz britânica "Eddy"), jfk 3,2% e p5 0,5%.
-- **Silêncio:** 621 s de pausas longas, com 0 palavras.
-- **Memória total** (app + overlay + worker + captura): 745 / 753 / 755 MB nos 3 primeiros minutos e 676 / 666 / 666 MB nos 3 últimos. Sem crescimento. O worker ocupa ~260 a 300 MB.
-- **CPU total:** mediana de 8,2% e máximo de 25%. Os valores vêm do `%cpu` do `ps`, que é uma média decaída, mais `app.getAppMetrics()`.
-- **Inferências:** 1939, com 2 passos descartados por backpressure.
-- **Depois do quit:** 0 helpers.
+Looping playlist: 6 passages, 5 voices, pauses of 1–10 s and 60 s of silence per loop; metrics sampled every minute (32 samples).
 
-A sessão anterior, rodada antes da correção do fim de frase, teve resultados equivalentes: p50 de 493 ms, p95 de 1253 ms, WER de 2,8%, 0 palavras no silêncio e memória sem crescimento.
+- **Latency on screen:** median of per-minute p50 446 ms, median of per-minute p95 1312 ms; worst minute p95 2104 ms.
+- **WER:** 2.3 % over 2,750 words (per passage: 0.4 %, 2.1 %, 2.4 %, 7.2 % — British voice "Eddy" —, 3.2 % `jfk`, 0.5 %).
+- **Silence:** 621 s of long pauses, 0 words.
+- **Total memory** (app + overlay + worker + capture): 745 / 753 / 755 MB in the first 3 minutes, 676 / 666 / 666 MB in the last 3 — no growth; the worker uses ~260–300 MB.
+- **Total CPU:** median 8.2 %, max 25 % (`ps` `%cpu`, a decaying average, plus `app.getAppMetrics()`).
+- **Inferences:** 1,939; 2 steps dropped by backpressure. **After quit:** 0 helpers.
 
-### Sessão de 6 min com small.en (trocado em execução, sem reiniciar o app)
+### 6-minute session, small.en (switched at runtime, no app restart)
 
-- **Latência na tela:** p50 de 625 ms e p95 de 1522 ms (mediana por minuto).
-- **WER:** 3,8% em 550 palavras.
-- **Silêncio:** 124 s, com 0 palavras.
-- **Memória total:** ~1,0 GB, estável.
-- **Depois do quit:** 0 helpers.
+Latency on screen p50 625 ms / p95 1522 ms; WER 3.8 % over 550 words; 124 s of silence, 0 words; total memory ~1.0 GB, stable; 0 helpers after quit.
 
-### Ciclo de vida
+### Lifecycle
 
-| Teste | Resultado |
+| Test | Result |
 |---|---|
-| 10 ciclos de Stop/Start (SIGUSR1 = mesma função do menu), executados duas vezes, a segunda no build final | 0 helpers depois de cada Stop, 0 órfãos, memória da árvore do app entre 308 e 375 MB, sem crescimento |
-| Quit (`osascript quit`) | 0 processos do app e 0 helpers |
-| `kill -9` no processo main | helpers saem sozinhos (EOF no stdin): 0 restantes |
-| Troca de modelo com o app aberto | PID do app inalterado, worker reiniciado com o novo modelo (base.en → base.en-q5_1 → small.en → small.en-q5_1 → base.en) |
+| 10 Stop/Start cycles (SIGUSR1 = same function as the UI), run twice | 0 helpers after each Stop, 0 orphans, app process tree 308–375 MB, no growth |
+| Quit | 0 app processes, 0 helpers |
+| `kill -9` of the main process | helpers exit by themselves (stdin EOF): 0 left |
+| Model switch with the app open | same app PID; worker restarted with the new model (base.en → base.en-q5_1 → small.en → small.en-q5_1 → base.en) |
 
-## Não verificado
+## 4. Speaker changes (tinydiarize, `small.en-tdrz`)
 
-- **Chamada real no Meet, Zoom ou Discord:** depende do usuário.
-- **Fones com fio ou Bluetooth e troca de saída com a captura ativa:** o código está implementado, mas não há hardware disponível na sessão.
-- **Permissão negada e depois concedida:** exige que o usuário altere o Ajustes do Sistema.
-- **Overlay sobre app em tela cheia e em outros Spaces:** depende de `type: 'panel'`, que é o comportamento documentado; não testei interativamente.
-- **Múltiplos monitores:** só há um monitor.
-- **Click-through e arrastar/redimensionar no modo de edição:** implementados, mas não exercitados com mouse real.
-- **`setContentProtection` durante compartilhamento de tela:** não testado. Pela documentação, apps que usam ScreenCaptureKit capturam a janela mesmo assim.
-
-## Troca de falante (tinydiarize, `small.en-tdrz`)
-
-| Teste | Resultado |
+| Test | Result |
 |---|---|
-| 3 diálogos sintéticos (`say`, 2 a 3 vozes, pausas de 0, 300 e 800 ms, 16 trocas) | **0 trocas detectadas**, também offline com o `whisper-cli` oficial. O modelo não reconhece troca em voz sintética, então esse teste não serve para avaliá-lo. |
-| Exemplo oficial Apollo 13 (rádio NASA, fala humana real), offline com `whisper-cli -tdrz` | 21 trocas marcadas, igual ao README do whisper.cpp |
-| Mesmo áudio tocado pelo sistema, streaming, **sem** contexto de transição | 1 a 2 das 21 trocas offline (recall de 5 a 10%), 0 falsas |
-| Streaming **com** 3 s de contexto (padrão para tdrz) | 2 execuções: recall de 52% e 57%, precisão de 73% e 75% (tolerância de ±2 palavras) |
-| Monólogos (ref1, p2, p3) com tdrz + contexto | 0 trocas falsas. WER de 1,3%, 2,4% e 0% (o contexto não duplicou palavras) |
-| Latência em fala limpa (monólogos), primeira aparição | p50 de 533 a 714 ms, p95 de 1,27 a 2,54 s (`small.en` sem tdrz: 491 ms / 1,19 s) |
-| Latência no áudio Apollo 13 (rádio ruidoso), primeira aparição | tdrz + contexto: 1,42 s / 4,03 s. `small.en` comum no mesmo áudio: 1,03 s / 6,14 s |
-| App empacotado | Troca para `small.en-tdrz` sem reiniciar o app, worker com `--tdrz`, e o overlay mostra cada fala numa linha com "–" (captura de tela verificada) |
+| 3 synthetic dialogues (`say`, 2–3 voices, 0/300/800 ms gaps, 16 turns) | **0 turns detected**, also offline with the official `whisper-cli` — the model does not recognize turns in synthetic voices, so this test cannot evaluate it |
+| Official Apollo 13 sample (NASA radio, real speech), offline `whisper-cli -tdrz` | 21 turns marked, as in the whisper.cpp README |
+| Same audio played through the system, streaming, **without** transition context | 1–2 of the 21 offline turns (recall 5–10 %), 0 false |
+| Streaming **with** 3 s of context (default for tdrz) | 2 runs: recall 52 % and 57 %, precision 73 % and 75 % (±2 words tolerance) |
+| Monologues (3 passages) with tdrz + context | 0 false turns; WER 1.3 %, 2.4 %, 0 % (context did not duplicate words) |
+| First-appearance latency, clean speech | p50 533–714 ms, p95 1.27–2.54 s (small.en without tdrz: 491 ms / 1.19 s) |
+| First-appearance latency, Apollo 13 (noisy radio) | tdrz + context 1.42 s / 4.03 s; plain small.en on the same audio 1.03 s / 6.14 s |
+| Packaged app | switch to `small.en-tdrz` without restart; worker runs with `--tdrz`; the overlay starts each speaker's line with "–" (screenshot checked) |
 
-**Ressalva importante:** a referência das 21 trocas é a saída **offline do próprio modelo**, não uma anotação humana. Ela mede o quanto o streaming preserva o que o modelo faria com o arquivo inteiro; a precisão absoluta contra a verdade não foi medida. Uma chamada real é o teste definitivo.
+**Caveat:** the 21-turn reference is the **model's own offline output**, not human annotation. It measures how much of the offline behavior survives streaming, not absolute accuracy. A real call is the definitive test.
+
+## 5. UI redesign (Spokemark) — before / after
+
+Same machine, same harness (`scripts/e2e-session.sh`: looping playlist through the real system output, base.en), packaged apps: the **MVP build** (menu-only UI) vs. **Spokemark** (panel, main window, history, settings).
+
+| Metric | MVP | Spokemark | Change |
+|---|---|---|---|
+| Latency to screen, p50 (10-min session) | 470 ms | 446 ms | −5 % |
+| Latency to screen, p95 (10-min session) | 1344 ms | 1375 ms | +2 % |
+| Latency to screen, p50 / p95 (5-min session) | 474 / 1302 ms | 464 / 1378 ms | −2 % / +6 % |
+| WER (10-min, 1,100 words) | 2.6 % | 2.7 % | 1 word |
+| Words produced in silence (249 s) | 0 | 0 | — |
+| Memory while capturing, median (10-min) | 643 MB | 636 MB | −1 % |
+| **Cumulative CPU time, all processes** (5-min session + teardown) | **61 s** | **58 s** | **−5 %** |
+| Idle memory, panel closed, onboarding done | 376 MB (4 processes) | 382 MB (4 processes) | +2 % |
+| Helpers left after quit | 0 | 0 | — |
+
+All within the ±10 % budget. Notes:
+- A first comparison based on `ps %cpu` (sampled once a minute, a decaying average) suggested higher CPU; per-process **cumulative** CPU time showed it was sampling noise (speech engine 29 s → 31 s at 1 s resolution, main process 26 s → 21 s).
+- The release build of the speech engine is portable (`GGML_NATIVE=OFF`). A fixed offline workload (VAD over ~8 min of audio + 20 transcriptions) used the same CPU time with native, portable and `armv8.4-a+dotprod+fp16` builds (1.67–1.77 s).
+- Keeping the panel always loaded would cost ~110 MB permanently; it is warmed on hover instead (see `DESIGN.md`).
+
+| UI test | Result |
+|---|---|
+| Unit tests (vitest) | 41 passed |
+| Playwright for Electron | 4 passed: onboarding with permission already granted; start/stop from the panel; preset in Settings restyles the overlay; **real capture → full-text search → `.srt` export** (plays audio) |
+| Panel open-to-paint | hover-warmed p50 47 ms / p95 59 ms; cold p50 138 ms / p95 188 ms |
+
+## Known limitations
+
+- **Source app is a heuristic.** `audiotap` reports apps that have an *open audio output stream* (`kAudioProcessPropertyIsRunningOutput`), not the app that is actually audible. A browser keeps its stream open with a paused video, so a session can be attributed to "Google Chrome" while the speech came from another process (observed in our tests with `afplay`).
+
+## Not verified
+
+- **A real call** in Meet, Zoom or Discord.
+- **Wired/Bluetooth headphones and switching the output device** while capturing (implemented; no hardware in the test sessions).
+- **Permission denied, then granted** (requires changing System Settings by hand).
+- **Overlay above full-screen apps and on other Spaces** (relies on the documented `type: 'panel'` behavior; not exercised interactively).
+- **Multiple displays** (only one display available).
+- **Click-through and drag/resize in edit mode with a real mouse.**
+- **VoiceOver** walkthrough (ARIA roles and labels are in place).
+- **`setContentProtection` during screen sharing** (per Electron docs, apps using ScreenCaptureKit capture the window anyway).
+- **Developer ID signing and notarization** (the project has no Apple Developer account; release builds are ad-hoc signed).

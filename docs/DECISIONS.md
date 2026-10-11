@@ -1,104 +1,92 @@
-# Decisões técnicas
+# Technical decisions
 
-Cada item traz a opção escolhida, as alternativas descartadas e o motivo. Tudo foi verificado no ambiente real: MacBook Air M4, macOS 26.6.2, Electron 44.7.0 e whisper.cpp v1.9.5.
+Each entry lists what was chosen, the alternatives that were discarded, and why. Everything was verified on the real environment: MacBook Air M4, macOS 26.6.2, Electron 44.7.0, whisper.cpp v1.9.5.
 
-## Captura de áudio
+## Audio capture
 
-**Escolhida: helper Swift (`native/audiotap`) com CoreAudio Process Tap.** O tap é criado por `AudioHardwareCreateProcessTap` com `CATapDescription(stereoGlobalTapButExcludeProcesses: [])`, `muteBehavior = .unmuted` e `isPrivate = true`, dentro de um aggregate device privado com `kAudioAggregateDeviceTapAutoStartKey`. A API está disponível a partir do macOS 14.2, conforme os headers do SDK em `AudioHardwareTapping.h`.
-- O tap exige só a permissão TCC "Gravação de Áudio do Sistema" (`kTCCServiceAudioCapture`), que é mais estreita que Gravação de Tela.
-- `muteBehavior = .unmuted` mantém a reprodução normal audível.
-- O PCM vai do helper direto para o processo main por stdout e nunca passa pelo renderer.
+**Chosen: a Swift helper (`native/audiotap`) using a CoreAudio Process Tap.** The tap is created with `AudioHardwareCreateProcessTap` and `CATapDescription(stereoGlobalTapButExcludeProcesses: [])`, `muteBehavior = .unmuted` and `isPrivate = true`, inside a private aggregate device with `kAudioAggregateDeviceTapAutoStartKey`. The API is available from macOS 14.2 (SDK headers, `AudioHardwareTapping.h`).
+- It only needs the TCC permission "System Audio Recording" (`kTCCServiceAudioCapture`), which is narrower than Screen Recording.
+- `muteBehavior = .unmuted` keeps normal playback audible.
+- PCM goes from the helper straight to the main process over stdout and never passes through a renderer.
 
-**Descartada: A, Electron puro (`setDisplayMediaRequestHandler` + `audio: 'loopback'`).** Testei em `scripts/spike-a/`:
-- Sem Gravação de Tela, `desktopCapturer.getSources()` é rejeitado e `getDisplayMedia` falha com `AbortError: Invalid capture constraints`.
-- Com Gravação de Tela concedida, funcionou: 1 trilha "loopback" a 48 kHz, RMS 0,18.
-- Mesmo assim foi descartada, por três motivos: exige um stream de vídeo da tela e a permissão de Gravação de Tela; o áudio passa pelo renderer; e as constraints de áudio vêm com AEC, NS e AGC ligados por padrão.
-- Desde o Electron 39 o Chromium já usa o mesmo CoreAudio Tap por baixo (docs de `desktopCapturer`), então a opção B usa a mesma API sem esse custo.
+**Discarded: pure Electron (`setDisplayMediaRequestHandler` + `audio: 'loopback'`).** Tested in `scripts/spike-a/`:
+- Without Screen Recording, `desktopCapturer.getSources()` rejects and `getDisplayMedia` fails with `AbortError: Invalid capture constraints`.
+- With Screen Recording granted it worked: one "loopback" track at 48 kHz, RMS 0.18.
+- Still discarded: it requires a screen video stream and the Screen Recording permission, audio goes through the renderer, and the audio constraints default to AEC/NS/AGC on.
+- Since Electron 39, Chromium uses the same CoreAudio Tap underneath (`desktopCapturer` docs), so the helper uses the same API without that cost.
 
-**Descartada: ScreenCaptureKit (`capturesAudio`).** Exige Gravação de Tela e não acrescenta nada ao Process Tap no macOS 14.2+.
+**Discarded: ScreenCaptureKit (`capturesAudio`).** Needs Screen Recording and adds nothing over the Process Tap on macOS 14.2+.
 
-**Descartada: BlackHole e drivers virtuais.** Proibidos pela especificação. Além disso, exigem trocar o dispositivo de saída.
+**Discarded: BlackHole and virtual drivers.** Out of scope by design; they also require changing the output device.
 
-**Troca de dispositivo de saída.** O helper escuta `kAudioHardwarePropertyDefaultSystemOutputDevice` e recria o aggregate device. O tap é global, não amarrado a um dispositivo. Isso não foi verificado com hardware real (ver README).
+**Output device changes.** The helper listens to `kAudioHardwarePropertyDefaultSystemOutputDevice` and rebuilds the aggregate device. The tap is global, not tied to a device. Not verified with real hardware (see `RESULTS.md`).
 
-**Protocolo.** Frames binários com cabeçalho de 24 bytes (magic, tipo, seq, tamanho e timestamp em ns), com três tipos de payload: FORMAT (JSON), AUDIO (float32 intercalado) e STATUS (JSON). Logs vão para stderr.
-- O timestamp usa `CLOCK_MONOTONIC_RAW` (= `mach_continuous_time`), o mesmo relógio de `process.hrtime.bigint()` no macOS.
-- Medido: primeiro usei `CLOCK_UPTIME_RAW` e a diferença foi de cerca de 52 h, que é o tempo de sono da máquina.
+**Protocol.** Binary frames with a 24-byte header (magic, type, seq, length, timestamp in ns) and three payload types: FORMAT (JSON), AUDIO (interleaved float32), STATUS (JSON). Logs go to stderr.
+- Timestamps use `CLOCK_MONOTONIC_RAW` (= `mach_continuous_time`), the same clock as `process.hrtime.bigint()` on macOS.
+- Measured: the first version used `CLOCK_UPTIME_RAW` and was ~52 h off — the machine's accumulated sleep time.
 
-**Detecção de problemas na captura.**
-- Permissão negada: preflight via SPI de TCC (`TCCAccessPreflight`, somente leitura). Se o resultado for "denied", o helper sai com código 3 e o app mostra o estado "permissão".
-- Permissão ausente: o tap entrega zeros digitais. Silêncio absoluto por 5 s desde o início gera `silent-since-start`.
-- Stream silencioso: gera `silent` / `audio-resumed`.
-- Dispositivo trocado: gera `device-changed`.
-- Helper encerrado: o supervisor reinicia com backoff exponencial, até 5 vezes por minuto.
+**Capture problems.**
+- Permission denied: read-only preflight through the TCC SPI (`TCCAccessPreflight`). On "denied" the helper exits with code 3 and the app shows the permission state.
+- Permission missing: the tap delivers digital zeros; 5 s of absolute silence from the start emits `silent-since-start`.
+- Silent stream: `silent` / `audio-resumed`. Device changed: `device-changed`.
+- Helper exit: restarted with exponential backoff, up to 5 times per minute.
 
-## Transcrição
+## Transcription
 
-**Escolhida: processo auxiliar C++ (`native/whisper-worker`) linkando a `libwhisper` estática com Metal (`GGML_METAL_EMBED_LIBRARY`).** O modelo é carregado uma vez e aquecido. Requisições chegam por frames binários no stdin; respostas saem em JSON por linha, com segmentos, tokens, `p`, `no_speech_prob` e logprob médio.
-- Isola crashes e o Metal fora do processo do Electron, e não tem problemas de ABI.
-- O log `ggml_metal_device_init: GPU name: MTL0 (Apple M4)` confirma o Metal.
+**Chosen: a C++ helper process (`native/whisper-worker`) statically linking `libwhisper` with Metal (`GGML_METAL_EMBED_LIBRARY`).** The model is loaded and warmed up once. Requests arrive as binary frames on stdin; responses are JSON lines with segments, tokens, `p`, `no_speech_prob` and mean logprob.
+- Isolates crashes and Metal from the Electron process; no ABI issues.
+- `ggml_metal_device_init: GPU name: MTL0 (Apple M4)` in the log confirms Metal.
 
-**Descartado: `whisper-stream`.** Pelo código atual (`examples/stream`), ele captura do microfone via SDL e não aceita PCM por stdin.
+**Discarded: `whisper-stream`** — per the current code (`examples/stream`) it captures the microphone through SDL and does not accept PCM on stdin.
+**Discarded: the Node addon (`examples/addon.node`)** — an example rather than a maintained package; it would need rebuilding against Electron's ABI and would put Metal in the main process.
+**Discarded: `whisper-server`** — HTTP plus WAV encoding for every window; only worth it if the options above failed.
 
-**Descartado: addon Node (`examples/addon.node`).** É um exemplo, não um pacote mantido, e teria de ser compilado contra o ABI do Electron. Também colocaria o Metal no processo main.
-
-**Descartado: `whisper-server`.** Usa HTTP e codifica WAV a cada janela. Só faria sentido se as alternativas acima falhassem.
-
-**VAD: Silero, embutido no whisper.cpp.** A versão 1.9.5 traz `whisper_vad_detect_speech_no_reset` / `whisper_vad_probs` e usamos o modelo `ggml-silero-v6.2.0`.
-- Roda na CPU, numa thread própria do worker, para continuar acompanhando o áudio enquanto uma inferência está em andamento.
-- Histerese: limiar 0,5 para entrar em fala e 0,35 para sair, com 600 ms de silêncio para encerrar.
-- Descartados: limiar de energia (proibido) e Silero via onnxruntime (dependência extra).
+**VAD: Silero, built into whisper.cpp** (`whisper_vad_detect_speech_no_reset` / `whisper_vad_probs`, model `ggml-silero-v6.2.0`).
+- Runs on the CPU on its own thread in the worker, so it keeps up while an inference is running.
+- Hysteresis: 0.5 to enter speech, 0.35 to leave it, 600 ms of silence to end an utterance.
+- Discarded: an energy threshold (not robust) and Silero through onnxruntime (extra dependency).
 
 **Streaming.**
-- Uma inferência a cada 500 ms, com no máximo uma em andamento. Se o worker estiver ocupado, o passo é descartado e contabilizado em `skippedBusy`.
-- Janela mínima de 1 s e máxima de 15 s. Acima de 8 s, a janela é cortada na última palavra confirmada.
-- A janela só existe se o VAD detectou fala; durante silêncio o início do buffer avança.
-- O ring buffer é fixo: 60 s a 16 kHz.
-- O Whisper não faz streaming por token. A latência vem de passo + inferência + concordância entre duas hipóteses.
+- One inference every 500 ms, at most one in flight; if the worker is busy the step is dropped (`skippedBusy`).
+- Window 1–15 s; beyond 8 s it is trimmed at the last confirmed word.
+- A window only exists if the VAD detected speech; during silence the buffer start moves forward.
+- Fixed ring buffer: 60 s at 16 kHz.
+- Whisper does not stream tokens: latency = step + inference + agreement between two hypotheses.
 
-**Confirmação: LocalAgreement-2.** O prefixo comum de duas hipóteses consecutivas é confirmado, e o texto confirmado nunca muda.
-- O alinhamento com o que já foi confirmado é feito **por texto**: as últimas 2 a 4 palavras confirmadas são procuradas na nova hipótese.
-- O timestamp por palavra é só fallback. Medi que os timestamps de token do whisper.cpp são grosseiros: com dedup só por tempo, a referência perdeu "team finished … version" e a WER foi de 5,3% (4 deleções em 75 palavras). Com alinhamento por texto, 0%.
-- DTW foi descartado porque o whisper.cpp o desativa com flash attention (`dtw_token_timestamps is not supported with flash_attn`).
+**Confirmation: LocalAgreement-2.** The common prefix of two consecutive hypotheses is confirmed; confirmed text never changes.
+- Alignment with already-confirmed text is done **by text** (the last 2–4 confirmed words are searched for in the new hypothesis).
+- Word timestamps are only a fallback: whisper.cpp token timestamps are coarse. With time-only dedup the reference lost "team finished … version" (WER 5.3%, 4 deletions in 75 words); with text alignment, 0%.
+- DTW discarded: whisper.cpp disables it with flash attention (`dtw_token_timestamps is not supported with flash_attn`).
 
-**Anti-alucinação.**
-- Nada é transcrito sem fala detectada pelo VAD.
-- Segmentos são descartados com `no_speech_prob > 0,6` e logprob médio < −1, ou com logprob médio < −1,5.
-- Frases típicas de silêncio ("Thank you.", "Thanks for watching" etc.) são descartadas quando menos de 50% dos frames são fala.
-- Tokens entre colchetes ou parênteses ("[BLANK_AUDIO]", "(music)") são removidos, e `suppress_nst` fica ligado.
-- Loops de 1 a 4 gramas repetidos 3 vezes ou mais são colapsados.
-- Palavra única isolada com p < 0,6 é descartada. Medido: aplausos no fim do `jfk.wav` geravam "Great." / "free." com p ≈ 0,55.
-- `no_context = true` e o prompt com texto anterior fica desligado (`usePrompt: false`), para evitar arrastar alucinações entre janelas.
-- Sem fallback de temperatura, para manter a latência limitada.
+**End of utterance.** An utterance is complete when the VAD has declared end of speech (after 600 ms of silence) and that end lies inside the transcribed window. The first version also required the VAD to have processed exactly up to the window end; since the VAD works in 256 ms chunks that was almost never true, so the same speech was re-transcribed during pauses. Found by a unit test.
 
-**Fim de frase.** Uma frase é considerada encerrada quando o VAD já declarou fim de fala (depois de 600 ms de silêncio) e esse fim está dentro da janela transcrita.
-- A primeira versão também exigia que o VAD tivesse processado até o fim exato da janela. Como o VAD trabalha em blocos de 256 ms, essa condição quase nunca era verdadeira.
-- O efeito era retranscrever a mesma fala durante a pausa até o corte da janela. Um teste unitário encontrou o problema.
+**Anti-hallucination.**
+- Nothing is transcribed without VAD speech.
+- Segments dropped with `no_speech_prob > 0.6` and mean logprob < −1, or mean logprob < −1.5.
+- Typical silence phrases ("Thank you.", "Thanks for watching", …) dropped when < 50% of their frames are speech.
+- Bracketed tokens ("[BLANK_AUDIO]", "(music)") removed; `suppress_nst` on.
+- Loops of 1–4-grams repeated ≥ 3 times collapsed.
+- A single isolated word with p < 0.6 dropped (measured: applause at the end of `jfk.wav` produced "Great." / "free." with p ≈ 0.55).
+- `no_context = true`; prompting with previous text off (`usePrompt: false`); no temperature fallback (bounded latency).
 
-**Troca de falante: tinydiarize** (`small.en-tdrz`, `tdrz_enable`, `whisper_full_get_segment_speaker_turn_next`).
-- A troca vira um pseudo-token que passa pelo LocalAgreement, então só vale depois de confirmada. No `SubtitleManager` ela inicia uma nova linha com "–".
-- Só marca a troca, sem identificar quem fala.
-- **Contexto de transição:** com esse modelo, a janela depois de uma pausa reenvia os últimos 3 s da fala anterior (`turnContextS`). As palavras repetidas são descartadas pelo alinhamento por texto.
-  - Medido no áudio Apollo 13: sem contexto, 1 a 2 de 21 trocas detectadas; com contexto, 11 a 12.
-  - O custo é ~0,4 s a mais no p50 da primeira aparição.
-- Descartada: diarização com embeddings de voz (WeSpeaker ou 3D-Speaker via ONNX), por ser uma dependência nativa nova, ter qualidade incerta em tempo real e não ter sido pedida.
+**Speaker changes: tinydiarize** (`small.en-tdrz`, `tdrz_enable`, `whisper_full_get_segment_speaker_turn_next`).
+- The turn is a pseudo-token that goes through LocalAgreement (counts only once confirmed) and starts a new line with "–".
+- Marks the change only; does not identify who is speaking.
+- **Transition context:** after a pause, the next window re-sends the last 3 s of the previous utterance (`turnContextS`) so the model sees both voices; repeated words are removed by text alignment. Apollo 13 audio: 1–2 of 21 turns without context, 11–12 with it; cost ≈ +0.4 s p50 first appearance.
+- Discarded: speaker-embedding diarization (WeSpeaker/3D-Speaker via ONNX) — new native dependency, uncertain real-time quality.
 
 ## App
 
-- **Overlay:** `BrowserWindow` com `type: 'panel'`, documentado como "float on top of full-screened apps" e "appear on all spaces". Também usa `setAlwaysOnTop(true, 'screen-saver')` e `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })`. Click-through usa `setIgnoreMouseEvents(true)`.
-- **Redimensionamento no modo de edição:** feito por uma alça no renderer, que envia o novo tamanho por IPC validado com zod. Descartado: `resizable: true` nativo, porque a documentação do Electron diz que "Transparent windows are not resizable".
-- **Proteção contra compartilhamento de tela:** `setContentProtection` fica como opção desligada por padrão. A documentação do Electron avisa que apps que usam ScreenCaptureKit capturam a janela mesmo assim.
-- **Build:** esbuild para main/preload, porque o preload em sandbox precisa ser um bundle único com o zod dentro. Vite + React + Tailwind v4 para o overlay. Descartados: electron-vite e electron-forge, para reduzir dependências.
-- **Empacotamento:** `@electron/packager` com assinatura ad hoc via `codesign`. Descartado: electron-builder, que é bem maior e cujos instaladores (DMG, auto-update) estão fora do escopo do MVP.
-- **IPC:** zod nas duas pontas. O main valida o que vem do renderer e o preload valida o que vem do main. O preload expõe 4 funções.
+- **Overlay:** `BrowserWindow` with `type: 'panel'` (documented to "float on top of full-screened apps" and "appear on all spaces"), plus `setAlwaysOnTop(true, 'screen-saver')` and `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })`. Click-through: `setIgnoreMouseEvents(true)`.
+- **Resizing in edit mode:** a renderer handle sends the new size over zod-validated IPC. Discarded: native `resizable: true` — Electron docs: "Transparent windows are not resizable".
+- **Hide from screen sharing:** `setContentProtection`, optional and off by default (apps using ScreenCaptureKit capture the window anyway, per Electron docs).
+- **Build:** esbuild for main/preload (the sandboxed preload must be one bundle with zod), Vite + React + Tailwind v4 for renderers. Discarded: electron-vite / electron-forge (more dependencies).
+- **Packaging:** `@electron/packager`, ad-hoc signing via `codesign`, optional Developer ID + notarization in CI. Discarded: electron-builder (much larger).
+- **IPC:** zod on both ends — main validates renderer requests, preloads validate main messages.
+- **History:** `node:sqlite` with FTS5 (built into Electron 44's Node 24). Discarded: `better-sqlite3` (native addon to rebuild for Electron) and JSON with linear search (doesn't scale).
 
-## Dependências
+## Dependencies
 
-**Runtime:** `react`, `react-dom` e `zod`, todas empacotadas no bundle.
-
-**Dev:** `electron`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite`, `typescript`, `esbuild`, `vitest`, `@electron/packager` e `@types/*`.
-
-**Nativas, sem addon N-API:**
-- whisper.cpp, compilado do código-fonte pela tag v1.9.5 em `vendor/`, porque é o motor de STT exigido.
-- CoreAudio/AudioToolbox, que são frameworks do sistema.
-- cmake, instalado via Homebrew, só para compilar o whisper.cpp.
+- **Runtime (bundled):** `react`, `react-dom`, `zod`, `lucide-react`.
+- **Dev:** `electron`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite`, `typescript`, `esbuild`, `vitest`, `@playwright/test`, `@electron/packager`, `@types/*`.
+- **Native (no N-API addons):** whisper.cpp v1.9.5 built from source in `vendor/`; CoreAudio/AudioToolbox/AppKit (system); `cmake` (build only); `potrace` (only to regenerate brand SVGs).

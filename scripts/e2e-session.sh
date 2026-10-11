@@ -30,5 +30,9 @@ while [ "$(date +%s)" -lt "$END" ]; do
   play ref1.aiff; gap 3; play p2.aiff; gap 2; play p3.aiff; gap 10; play p4.aiff; gap 1; play jfk.wav; gap 2; play p5.aiff; gap 60
 done
 sleep 65 # one more metrics sample
+# Cumulative CPU time of every process of the app (main, renderers, GPU, helpers):
+# robust, unlike `ps %cpu` sampled once a minute.
+APP_DIR_ESC="$(dirname "$APP")/$(basename "$APP")"
+ps -A -o cputime=,command= | grep -F "$APP_DIR_ESC" | grep -v grep | awk '{split($1,t,":"); n=split($1,t,":"); s=0; for(i=1;i<=n;i++) s=s*60+t[i]; total+=s; line=$0; sub(/^ *[^ ]+ +/,"",line); sub(/.*\/Contents\//,"",line); printf "%8.1f s  %s\n", s, substr(line,1,90)} END {printf "%8.1f s  TOTAL\n", total}' | tee "$OUT/cputime.txt"
 osascript -e "quit app \"$(basename "$APP" .app)\""; sleep 3
 echo "helpers after quit: $(ps -A -o command= | grep -cE 'bin/(audiotap|whisper-worker)( |$)' || true)" | tee "$OUT/after-quit.txt"

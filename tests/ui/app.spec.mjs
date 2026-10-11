@@ -71,7 +71,7 @@ test('history: real capture, full-text search and export', async () => {
   const main = await page('main');
   await main.getByRole('tab', { name: /Histórico|History/ }).click();
   await main.getByRole('searchbox').fill('countr');
-  await expect(main.getByRole('option').first()).toContainText(/country/i, { timeout: 10_000 });
+  await expect(main.getByRole('listbox', { name: /Histórico|History/ }).getByRole('option').first()).toContainText(/country/i, { timeout: 10_000 });
   await main.getByRole('button', { name: /Exportar \.srt|Export \.srt/ }).click();
   await expect.poll(() => readdirSync(exportDir).filter((f) => f.endsWith('.srt')).length, { timeout: 5000 }).toBeGreaterThan(0);
   const srt = readFileSync(path.join(exportDir, readdirSync(exportDir).find((f) => f.endsWith('.srt'))), 'utf8');

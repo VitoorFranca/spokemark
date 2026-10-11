@@ -1,0 +1,45 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Start captions\n2. Play …\n3. …"
+  - type: input
+    id: version
+    attributes:
+      label: Spokemark version
+      placeholder: Settings → About (e.g. 0.1.0)
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac model
+      placeholder: macOS 26.1, MacBook Air M4
+    validations:
+      required: true
+  - type: dropdown
+    id: model
+    attributes:
+      label: Speech model
+      options: [Standard, Standard · compact, Enhanced, Enhanced · compact, Enhanced · speakers, Not sure]
+  - type: input
+    id: source
+    attributes:
+      label: Audio source
+      placeholder: e.g. Zoom call, YouTube in Safari, AirPods
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Please remove anything private from transcripts before pasting.

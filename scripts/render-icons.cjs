@@ -77,6 +77,7 @@ app.whenReady().then(async () => {
   }
   execFileSync('iconutil', ['-c', 'icns', iconset, '-o', path.join(ROOT, 'build/macos/icon.icns')]);
   await renderAppIcon(512, path.join(ROOT, 'src/renderer/public/icon.png')); // in-app logo
+  fs.copyFileSync(path.join(ROOT, 'src/renderer/public/icon.png'), path.join(ROOT, 'assets/brand/icon-512.png')); // README/docs
   await render('logo.svg', 512, path.join(ROOT, 'build/logo-svg-preview.png')); // review only
   for (const [svg, name] of [['tray-idle.svg', 'trayIdle'], ['tray-listening.svg', 'trayListening']]) {
     await render(svg, 18, path.join(ROOT, `assets/tray/${name}Template.png`));
