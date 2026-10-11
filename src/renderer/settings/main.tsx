@@ -102,7 +102,7 @@ function CaptionsTab({ s, t }: { s: AppStateMsg; t: T }) {
   return (
     <>
       <div aria-label={t('captions.preview')} role="img" className="mb-5 overflow-hidden rounded-[12px] border border-[var(--border)]"
-        style={{ background: 'linear-gradient(135deg,#3a4a5c 0%,#6b5a4e 55%,#2c3440 100%)' }}>
+        style={{ background: 'radial-gradient(120% 90% at 30% 20%, #1A3FB8 0%, #0A1F66 45%, #020A2A 100%)' }}>
         <div className="flex h-[200px] items-end justify-center px-8 pb-5">
           <div className="w-full max-w-[520px]"><CaptionBox look={{ ...st, fontSize: Math.round(st.fontSize * 0.75) }} lines={lines} /></div>
         </div>
@@ -249,7 +249,7 @@ function SettingsWindow() {
   };
   return (
     <div className="flex h-full flex-col">
-      <header className="drag shrink-0 border-b border-[var(--separator)] pt-[30px] pb-1.5">
+      <header className="drag shrink-0 border-b border-[var(--separator)] pt-[30px] pb-1.5 bg-[var(--chrome-tint)]">
         <div role="tablist" aria-label={t('settings.title')} onKeyDown={onKey} className="flex justify-center gap-1">
           {SETTINGS_TABS.map((k) => <ToolbarTab key={k} icon={ICONS[k]} label={t(`tab.${k}`)} active={tab === k} onClick={() => setTab(k)} />)}
         </div>

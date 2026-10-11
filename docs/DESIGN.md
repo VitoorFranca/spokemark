@@ -54,6 +54,9 @@ Cada item traz o que foi escolhido, as alternativas descartadas e o motivo. As m
 - **Capturas com `screencapture -l <CGWindowID>`** (o ID vem de `getMediaSourceId()`), em vez de `webContents.capturePage`. O `capturePage` captura só o conteúdo web, então as áreas com vibrancy saem transparentes e não representam o que o usuário vê.
 - **Estados não felizes reais,** sem mocks: modelo ausente (pasta vazia), download em andamento (download real) e erro (arquivo de modelo inválido). O card de **permissão negada** não foi capturado, porque exigiria revogar a permissão real do usuário.
 
-## Identidade
+## Identidade (logo e cores)
 
-Veja `docs/BRAND.md`.
+A paleta e os ícones derivam de `assets/logo.png`; veja `docs/BRAND.md`.
+- **No escuro:** azul-marinho nas superfícies e ciano como destaque. **No claro:** neutros frios e azul-elétrico.
+- **Vibrancy:** fica, porque é o comportamento nativo do macOS, mas recebe um tom da marca (`--chrome-tint`). Descartado: superfícies sólidas no lugar da vibrancy, porque perderiam a sensação nativa.
+- **Brilho da logo:** aparece só como sombra estática no botão principal enquanto o app ouve. Descartado: brilho animado ou pulsante, que viola a regra de "nenhuma animação em loop".

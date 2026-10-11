@@ -8,6 +8,7 @@ import { formatDate, formatDuration } from '../shared/format';
 import { api, useAppState, useCommand, useLive, useT } from '../shared/hooks';
 import { statusLabel, StatusDot } from '../shared/StatusBits';
 import { Button, cx, EmptyState, IconButton, SidebarItem } from '../shared/ui';
+import { APP_NAME } from '../../shared/brand';
 
 type T = ReturnType<typeof useT>;
 type SessionFull = SessionRowMsg & { segments: SegmentMsg[] };
@@ -230,13 +231,14 @@ function MainWindow() {
   if (!s) return null;
   return (
     <div className="flex h-full">
-      <nav aria-label="Sidebar" className="drag flex w-[200px] shrink-0 flex-col px-2.5 pt-[52px] pb-3">
+      <nav aria-label="Sidebar" className="drag flex w-[200px] shrink-0 flex-col px-2.5 pt-[52px] pb-3 bg-[var(--chrome-tint)]">
         <div role="tablist" aria-orientation="vertical" className="flex flex-col gap-0.5">
           <SidebarItem icon={Radio} label={t('main.live')} active={view === 'live'} onClick={() => setView('live')}
-            badge={s.running ? <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" aria-label={t('state.listening')} /> : undefined} />
+            badge={s.running ? <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal)]" aria-label={t('state.listening')} /> : undefined} />
           <SidebarItem icon={History} label={t('main.history')} active={view === 'history'} onClick={() => setView('history')} />
         </div>
         <div className="flex-1" />
+        <div className="mb-2 flex items-center gap-2 px-2 opacity-90"><img src="./icon.png" alt="" className="h-5 w-5" /><span className="text-[12px] font-semibold text-[var(--text-2)]">{APP_NAME}</span></div>
         <SidebarItem icon={Settings2} label={t('action.openSettings').replace('…', '')} active={false} onClick={() => void api().request('window.open', { window: 'settings' })} />
       </nav>
       <main className="relative min-w-0 flex-1 bg-[var(--bg)] border-l border-[var(--separator)]">

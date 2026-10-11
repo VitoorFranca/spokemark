@@ -1,110 +1,109 @@
-/* Spokemark design tokens (docs/BRAND.md). Light is default; dark follows the
-   system appearance via nativeTheme -> prefers-color-scheme. */
+/* Spokemark design tokens (docs/BRAND.md), derived from the logo:
+   navy #00061E/#012478, electric blue #1658FA, cyan #18D2FD, ice #BBECFD.
+   The main process sets data-theme on <html> (nativeTheme); the media query is
+   only the pre-JS fallback. */
 :root {
   color-scheme: light;
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-
-  --bg: #F6F5F3;            /* window content */
+  --bg: #F5F6FA;            /* window content: cool neutral */
   --surface: #FFFFFF;       /* cards, rows */
-  --surface-2: #EFEDEA;     /* inset areas, segmented track */
-  --surface-hover: rgba(0, 0, 0, 0.045);
-  --text: #1C1B1A;
-  --text-2: #6B6863;        /* 5.1:1 on --bg */
-  --text-3: #8E8A84;        /* decorative / disabled only */
-  --border: rgba(0, 0, 0, 0.09);
-  --separator: rgba(0, 0, 0, 0.07);
-  --accent: #C2410C;        /* 5.2:1 with white text */
-  --accent-hover: #A8380A;
-  --accent-soft: rgba(194, 65, 12, 0.10);
+  --surface-2: #ECEEF5;     /* inset areas, segmented track */
+  --surface-hover: rgba(13, 30, 90, 0.05);
+  --text: #0D1326;          /* 17:1 on --bg */
+  --text-2: #566079;        /* 5.8:1 on --bg */
+  --text-3: #8A93A8;        /* decorative / disabled only */
+  --border: rgba(13, 30, 90, 0.10);
+  --separator: rgba(13, 30, 90, 0.08);
+  --accent: #1658FA;        /* logo electric blue; white text 5.5:1 */
+  --accent-hover: #0E47D6;
+  --accent-soft: rgba(22, 88, 250, 0.10);
   --on-accent: #FFFFFF;
-  --success: #1E7B4A;
-  --success-soft: rgba(30, 123, 74, 0.10);
-  --warning: #A15C00;
+  --signal: #0789B8;        /* logo cyan, darkened for 3.7:1 as a graphic on --bg */
+  --success: #0F7A50;
+  --success-soft: rgba(15, 122, 80, 0.10);
+  --warning: #9A5A00;
   --warning-soft: rgba(196, 120, 0, 0.12);
-  --danger: #C0261B;
-  --danger-soft: rgba(192, 38, 27, 0.10);
-  --focus: rgba(194, 65, 12, 0.45);
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --danger: #C42B1F;
+  --danger-soft: rgba(196, 43, 31, 0.10);
+  --focus: rgba(22, 88, 250, 0.45);
+  --shadow-1: 0 1px 2px rgba(13, 30, 90, 0.08);
+  --glow: 0 4px 16px rgba(22, 88, 250, 0.28);
 
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 14px;
   --dur: 180ms;
   --ease: cubic-bezier(0.2, 0, 0, 1);
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-strong: rgba(255, 255, 255, 0.80);
+  --sidebar-selected: rgba(22, 88, 250, 0.10);
+  --chrome-tint: rgba(240, 244, 255, 0.35); /* tints vibrancy toward the brand */
 }
 
-/* Dark tokens: the main process tells each window which theme macOS is using
-   (data-theme on <html>); the media query is only the pre-JS fallback. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1C1B1A;
-    --surface: #262524;
-    --surface-2: #2F2D2B;
-    --surface-hover: rgba(255, 255, 255, 0.06);
-    --text: #F2F0ED;
-    --text-2: #A19D97;      /* 6.4:1 on --bg */
-    --text-3: #77736D;
-    --border: rgba(255, 255, 255, 0.10);
-    --separator: rgba(255, 255, 255, 0.08);
-    --accent: #FF8A5B;      /* 7.4:1 on --bg */
-    --accent-hover: #FF9C73;
-    --accent-soft: rgba(255, 138, 91, 0.14);
-    --on-accent: #1A0F0A;   /* 8.1:1 on accent */
-    --success: #4CC38A;
-    --success-soft: rgba(76, 195, 138, 0.14);
-    --warning: #F0B43C;
-    --warning-soft: rgba(240, 180, 60, 0.14);
-    --danger: #FF6B5E;
-    --danger-soft: rgba(255, 107, 94, 0.14);
-    --focus: rgba(255, 138, 91, 0.55);
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+  --bg: #0A0F1F;            /* logo navy */
+  --surface: #121A30;
+  --surface-2: #1A2440;
+  --surface-hover: rgba(140, 170, 255, 0.07);
+  --text: #EAF0FB;          /* 16.7:1 on --bg */
+  --text-2: #9AA7C2;        /* 7.9:1 on --bg */
+  --text-3: #6B7894;
+  --border: rgba(140, 170, 255, 0.13);
+  --separator: rgba(140, 170, 255, 0.09);
+  --accent: #18D2FD;        /* logo cyan: 10.6:1 on --bg; navy text on it 10.3:1 */
+  --accent-hover: #5CDFFF;
+  --accent-soft: rgba(24, 210, 253, 0.13);
+  --on-accent: #04122E;
+  --signal: #18D2FD;
+  --success: #3FD49A;
+  --success-soft: rgba(63, 212, 154, 0.14);
+  --warning: #F2B84B;
+  --warning-soft: rgba(242, 184, 75, 0.14);
+  --danger: #FF7A6E;
+  --danger-soft: rgba(255, 122, 110, 0.14);
+  --focus: rgba(24, 210, 253, 0.55);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --glow: 0 0 0 1px rgba(24, 210, 253, 0.35), 0 6px 22px rgba(22, 88, 250, 0.45);
+  --glass: rgba(120, 150, 255, 0.07);
+  --glass-strong: rgba(18, 26, 48, 0.78);
+  --sidebar-selected: rgba(24, 210, 253, 0.12);
+  --chrome-tint: rgba(6, 12, 34, 0.55); /* navy over the system's dark vibrancy */
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #1C1B1A;
-  --surface: #262524;
-  --surface-2: #2F2D2B;
-  --surface-hover: rgba(255, 255, 255, 0.06);
-  --text: #F2F0ED;
-  --text-2: #A19D97;      /* 6.4:1 on --bg */
-  --text-3: #77736D;
-  --border: rgba(255, 255, 255, 0.10);
-  --separator: rgba(255, 255, 255, 0.08);
-  --accent: #FF8A5B;      /* 7.4:1 on --bg */
-  --accent-hover: #FF9C73;
-  --accent-soft: rgba(255, 138, 91, 0.14);
-  --on-accent: #1A0F0A;   /* 8.1:1 on accent */
-  --success: #4CC38A;
-  --success-soft: rgba(76, 195, 138, 0.14);
-  --warning: #F0B43C;
-  --warning-soft: rgba(240, 180, 60, 0.14);
-  --danger: #FF6B5E;
-  --danger-soft: rgba(255, 107, 94, 0.14);
-  --focus: rgba(255, 138, 91, 0.55);
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --bg: #0A0F1F;            /* logo navy */
+  --surface: #121A30;
+  --surface-2: #1A2440;
+  --surface-hover: rgba(140, 170, 255, 0.07);
+  --text: #EAF0FB;          /* 16.7:1 on --bg */
+  --text-2: #9AA7C2;        /* 7.9:1 on --bg */
+  --text-3: #6B7894;
+  --border: rgba(140, 170, 255, 0.13);
+  --separator: rgba(140, 170, 255, 0.09);
+  --accent: #18D2FD;        /* logo cyan: 10.6:1 on --bg; navy text on it 10.3:1 */
+  --accent-hover: #5CDFFF;
+  --accent-soft: rgba(24, 210, 253, 0.13);
+  --on-accent: #04122E;
+  --signal: #18D2FD;
+  --success: #3FD49A;
+  --success-soft: rgba(63, 212, 154, 0.14);
+  --warning: #F2B84B;
+  --warning-soft: rgba(242, 184, 75, 0.14);
+  --danger: #FF7A6E;
+  --danger-soft: rgba(255, 122, 110, 0.14);
+  --focus: rgba(24, 210, 253, 0.55);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --glow: 0 0 0 1px rgba(24, 210, 253, 0.35), 0 6px 22px rgba(22, 88, 250, 0.45);
+  --glass: rgba(120, 150, 255, 0.07);
+  --glass-strong: rgba(18, 26, 48, 0.78);
+  --sidebar-selected: rgba(24, 210, 253, 0.12);
+  --chrome-tint: rgba(6, 12, 34, 0.55); /* navy over the system's dark vibrancy */
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root { --dur: 0ms; }
   *, *::before, *::after { animation-duration: 0ms !important; transition-duration: 0ms !important; }
-}
-
-/* Translucent surfaces for windows with vibrancy (panel, sidebars, toolbars). */
-:root {
-  --glass: rgba(255, 255, 255, 0.55);
-  --glass-strong: rgba(255, 255, 255, 0.78);
-  --sidebar-selected: rgba(0, 0, 0, 0.08);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --glass: rgba(255, 255, 255, 0.06);
-    --glass-strong: rgba(40, 39, 38, 0.72);
-    --sidebar-selected: rgba(255, 255, 255, 0.10);
-  }
-}
-:root[data-theme="dark"] {
-  --glass: rgba(255, 255, 255, 0.06);
-  --glass-strong: rgba(40, 39, 38, 0.72);
-  --sidebar-selected: rgba(255, 255, 255, 0.10);
 }

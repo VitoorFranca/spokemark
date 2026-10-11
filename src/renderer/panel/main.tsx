@@ -59,6 +59,9 @@ function Panel() {
     setMenu(false);
     requestAnimationFrame(() => { mainBtn.current?.focus({ focusVisible: false } as FocusOptions); requestAnimationFrame(() => void api().request('panel.rendered')); });
   }, []));
+  // A cold-created panel may get 'panel-shown' before React mounts: focus the main control on mount too.
+  const hasState = useAppState() !== null;
+  useEffect(() => { if (hasState) mainBtn.current?.focus({ focusVisible: false } as FocusOptions); }, [hasState]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !menu) void api().request('panel.hide'); };
     window.addEventListener('keydown', onKey);
@@ -73,9 +76,10 @@ function Panel() {
   const installed = s.models.filter((m) => m.installed);
 
   return (
-    <div className="relative flex h-full flex-col p-3 gap-3" onClick={() => menu && setMenu(false)}>
+    <div className="relative flex h-full flex-col p-3 gap-3 bg-[var(--chrome-tint)]" onClick={() => menu && setMenu(false)}>
       {/* header */}
-      <header className="flex items-center gap-2 px-1 pt-0.5">
+      <header className="flex items-center gap-2.5 px-1 pt-0.5">
+        <img src="./icon.png" alt="" className="h-8 w-8 -my-0.5" />
         <div className="flex-1 min-w-0">
           <h1 className="text-[14px] font-semibold leading-tight">{APP_NAME}</h1>
           <p className="flex items-center gap-1.5 text-[12px] text-[var(--text-2)]" aria-live="polite"><StatusDot status={st} />{statusLabel(st, t)}</p>
@@ -90,13 +94,13 @@ function Panel() {
         aria-label={s.running ? t('action.stop') : t('action.start')}
         className={cx('flex h-14 w-full items-center gap-3 rounded-[12px] px-4 text-left transition-colors duration-[var(--dur)] disabled:opacity-50',
           s.running || st === 'modelMissing' || s.errorKind === 'model'
-            ? 'bg-[var(--glass-strong)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface)]' // the card below holds the primary action
+            ? cx('bg-[var(--glass-strong)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface)]', capturing && 'shadow-[var(--glow)]') // the card below holds the primary action; static glow while listening
             : 'bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-hover)] shadow-[0_1px_3px_rgba(0,0,0,.2)]')}>
         <span className={cx('flex h-8 w-8 items-center justify-center rounded-full', s.running || st === 'modelMissing' || s.errorKind === 'model' ? 'bg-[var(--surface-2)]' : 'bg-white/20')}>
           {s.running ? <Square size={14} strokeWidth={2.2} fill="currentColor" aria-hidden /> : <Play size={16} strokeWidth={2.2} fill="currentColor" aria-hidden className="ml-0.5" />}
         </span>
         <span className="flex-1 text-[15px] font-semibold">{s.running ? t('action.stop') : t('action.start')}</span>
-        {capturing && <span className="text-[var(--accent)]"><LevelMeter db={db} active label={t('panel.level')} /></span>}
+        {capturing && <span className="text-[var(--signal)]"><LevelMeter db={db} active label={t('panel.level')} /></span>}
       </button>
 
       {/* actionable states */}

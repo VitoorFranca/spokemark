@@ -92,4 +92,6 @@ O pipeline fica em `.github/workflows/release.yml`.
 
 ## Licença
 
-[MIT](LICENSE). Os componentes de terceiros também são MIT ou ISC: whisper.cpp, modelos Whisper, tinydiarize, Silero VAD, Electron, React e Lucide.
+O código-fonte usa a licença [MIT](LICENSE). O **nome, a logo e a identidade visual do Spokemark ficam fora da licença MIT**; veja [TRADEMARKS.md](TRADEMARKS.md) para o que é permitido, como usar a logo para identificar ou divulgar o projeto, e o que não é, como apresentar um derivado como oficial.
+
+Os componentes de terceiros são MIT ou ISC: whisper.cpp, modelos Whisper, tinydiarize, Silero VAD, Electron, React e Lucide.

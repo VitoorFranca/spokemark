@@ -19,34 +19,49 @@
 - **Bundle ID:** continua o do MVP, para preservar a permissão TCC já concedida.
 - **Pasta de dados:** as pastas de builds anteriores ("Earline" e "Live Captions") são migradas uma vez.
 
-## Cor de destaque: Brasa
+## Logo
 
-Laranja-brasa, quente e diferente da referência monocromática. Remete à "luz" da legenda sobre o vídeo e só aparece na ação primária, no estado "ouvindo" e no foco.
+**Fonte:** `assets/logo.png`, de 1254 px. A logo foi gerada por IA (ChatGPT), sem designer contratado e sem uso intencional de elementos de terceiros. Mostra um "S" em forma de balão de fala, em branco, gelo e ciano com brilho, sobre um squircle azul-elétrico e fundo azul-marinho.
+
+**Uso:** a licença MIT do código **não** se aplica ao nome, à logo nem à identidade visual. Veja [`TRADEMARKS.md`](../TRADEMARKS.md).
+
+### Derivados gerados a partir da logo
+
+| Arquivo | Como é gerado | Uso |
+|---|---|---|
+| `build/macos/icon.icns` (128 a 1024 px) | **PNG original**, recortado com squircle de cantos contínuos (superelipse n=5) e posicionado na grade de 824/1024 do macOS | Ícone do app |
+| `build/macos/icon.icns` (16 e 32 px) | `logo.svg` | Nos tamanhos pequenos, o brilho do original vira borrão; o vetor fica nítido |
+| `src/renderer/public/icon.png` | PNG original recortado, 512 px | Logo dentro do app (painel, onboarding, Sobre, sidebar) |
+| `assets/brand/glyph.svg` | Glifo vetorizado com `potrace` a partir do PNG (pixels claros: verde > 140, dentro do squircle) | Base dos vetores abaixo |
+| `assets/brand/logo.svg` | **Recriação** vetorial, com gradientes e brilho aproximados; não é cópia exata | Tamanhos pequenos, web e documentação |
+| `assets/tray/*Template.png` | `tray-idle.svg` (glifo sólido) e `tray-listening.svg` (glifo com ponto indicador), em 18 pt @1x/@2x | Barra de menus (*template images* monocromáticas) |
+
+**Regerar:** `scripts/brand/vectorize-logo.sh`, depois `npx electron scripts/render-icons.cjs`. O pipeline é reproduzível: a saída é idêntica byte a byte aos arquivos versionados.
+
+## Cores (derivadas da logo)
+
+Amostradas nos pixels da logo:
+- **Azul-marinho:** `#00061E` / `#012478`
+- **Azul-elétrico:** `#1658FA` / `#0034BE`
+- **Ciano:** `#18D2FD`
+- **Gelo:** `#BBECFD`
 
 | Token | Claro | Escuro | Uso |
 |---|---|---|---|
-| `--bg` | `#F6F5F3` | `#1C1B1A` | fundo das janelas (neutro levemente quente) |
-| `--surface` | `#FFFFFF` | `#262524` | cards e linhas |
-| `--surface-2` | `#EFEDEA` | `#2F2D2B` | áreas recuadas e trilho de controles |
-| `--text` | `#1C1B1A` | `#F2F0ED` | texto primário |
-| `--text-2` | `#6B6863` (5,1:1) | `#A19D97` (6,4:1) | texto secundário (AA) |
-| `--border` | preto 9% | branco 10% | bordas finas |
-| `--accent` | `#C2410C` (texto branco 5,2:1) | `#FF8A5B` (7,4:1 no fundo; texto escuro 8,1:1) | ação primária, foco |
-| `--success` | `#1E7B4A` | `#4CC38A` | permissão ok, modelo pronto |
-| `--warning` | `#A15C00` | `#F0B43C` | atenção |
-| `--danger` | `#C0261B` | `#FF6B5E` | erro, apagar |
+| `--bg` | `#F5F6FA` (neutro frio) | `#0A0F1F` (marinho) | fundo das janelas |
+| `--surface` / `--surface-2` | `#FFFFFF` / `#ECEEF5` | `#121A30` / `#1A2440` | cards e áreas recuadas |
+| `--text` | `#0D1326` (17:1) | `#EAF0FB` (16,7:1) | texto primário |
+| `--text-2` | `#566079` (5,8:1) | `#9AA7C2` (7,9:1) | texto secundário |
+| `--accent` | `#1658FA`, azul-elétrico (texto branco 5,5:1) | `#18D2FD`, ciano (10,6:1; texto marinho 10,3:1) | ação primária, seleção, foco |
+| `--signal` | `#0789B8` (3,7:1, gráfico) | `#18D2FD` | estado "ouvindo", medidor de nível |
+| `--success` / `--warning` / `--danger` | `#0F7A50` / `#9A5A00` / `#C42B1F` | `#3FD49A` / `#F2B84B` / `#FF7A6E` | estados (todos ≥ 4,5:1 nas superfícies) |
+| `--chrome-tint` | gelo a 35% | marinho a 55% | tinge a vibrancy do sistema na cor da marca (painel, sidebar, toolbar) |
+| `--glow` | sombra azul | contorno ciano com sombra azul | brilho **estático** no botão principal enquanto ouve, que remete ao brilho da logo |
 
-Os contrastes foram calculados com a fórmula WCAG 2.x (script em Python na sessão de desenvolvimento). Os tokens ficam em `src/renderer/shared/tokens.css`. Raios: 6, 10 e 14 px. Duração das transições: 180 ms. Easing: `cubic-bezier(.2,0,0,1)`.
-
-## Ícones
-
-- **App** (`assets/brand/app-icon.svg` → `build/macos/icon.icns`):
-  - Formato: squircle na grade de 824/1024 do macOS, com gradiente Brasa.
-  - Desenho: um balão de fala branco com **duas linhas de legenda**, uma sólida e uma atenuada. É a metáfora do produto: texto confirmado e texto provisório.
-- **Barra de menus** (`assets/tray/*Template.png`): *template images* monocromáticas de 18 pt, em @1x e @2x.
-  - **Inativo:** balão em contorno.
-  - **Ouvindo:** balão preenchido, com as linhas vazadas.
-- **Geração:** `npx electron scripts/render-icons.cjs` renderiza os SVGs com o próprio Electron e chama o `iconutil`. Não há dependência extra.
+- **Contraste:** calculado com a fórmula WCAG 2.x. Os tokens ficam em `src/renderer/shared/tokens.css`.
+- **Raios:** 6, 10 e 14 px. **Transições:** 180 ms.
+- **Overlay:** **não** usa a cor da marca. Mantém branco sobre preto por legibilidade.
+- **Azul é a cor padrão do macOS:** a identidade se diferencia pelo ciano (estado ativo) e pelo marinho (tema escuro).
 
 ## Tipografia
 

@@ -13,7 +13,7 @@ export function statusLabel(s: Status, t: T): string {
 }
 
 export function StatusDot({ status }: { status: Status }) {
-  const color = status === 'listening' || status === 'processing' ? 'var(--success)'
+  const color = status === 'listening' || status === 'processing' ? 'var(--signal)'
     : status === 'silent' || status === 'loading' || status === 'stopping' ? 'var(--warning)'
     : status === 'permission' || status === 'error' || status === 'modelMissing' ? 'var(--danger)' : 'var(--text-3)';
   return <span aria-hidden className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
