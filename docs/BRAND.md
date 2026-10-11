@@ -22,7 +22,7 @@
 3. Eight passed: Saidstone, Minuteloom, Wrenote, **Spokemark**, Quillear, Heardlight, Heardara, Larkscribe. Larkscribe had a mention of an audio app with the same name; Minuteloom is close to the Loom brand.
 
 **In code:** a single constant, `APP_NAME` in `src/shared/brand.ts`, drives the package name, UI text, data folder and menus.
-- **Bundle ID:** still the MVP's, to keep the TCC permission users already granted.
+- **Bundle ID:** `app.spokemark.desktop` (reverse DNS of `spokemark.app`), permanent from v0.1.1 on. Up to v0.1.0 it was `dev.local.livecaptions`; because macOS ties the *System Audio Recording* grant to the bundle ID, users of v0.1.0 grant the permission once more after updating.
 - **Data folder:** folders from earlier builds ("Earline", "Live Captions") are migrated once.
 
 ## Logo

@@ -28,7 +28,7 @@ const [appDir] = await packager({
   platform: 'darwin',
   arch: 'arm64',
   name: APP_NAME,
-  appBundleId: BUNDLE_ID, // kept from the MVP: the TCC grant is tied to it
+  appBundleId: BUNDLE_ID, // permanent: the TCC grant is tied to it
   icon: 'build/macos/icon.icns',
   appCategoryType: 'public.app-category.utilities',
   asar: true,

@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Changed
+- Permanent bundle identifier `app.spokemark.desktop` (was `dev.local.livecaptions`). macOS asks for the *System Audio Recording* permission again once after updating from 0.1.0.
+
 ## [0.1.0] - 2026-10-11
 
 First public release. Unsigned (ad-hoc) build for Apple Silicon, macOS 14.2+.
