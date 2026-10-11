@@ -35,11 +35,11 @@ for (const theme of ['light', 'dark']) {
     await p.getByRole('button', { name: /Cancelar|Cancel/ }).click();
     await sleep(500);
   } else {
-    await p.getByRole('button', { name: /Iniciar legendas|Start Captions/ }).click();
+    const start = p.getByRole('button', { name: /Iniciar legendas|Start Captions/ });
+    if (await start.isEnabled()) await start.click(); // disabled once the model error is known
     await p.getByText(/Algo deu errado|Something went wrong/).first().waitFor({ timeout: 60_000 });
     await sleep(400);
     await shot('panel', `panel-error-${theme}`);
-    await p.getByRole('button', { name: /Parar|Stop|Iniciar|Start/ }).first().click().catch(() => {});
   }
   await hook('showPanel');
   await sleep(400);
