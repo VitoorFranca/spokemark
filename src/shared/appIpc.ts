@@ -25,7 +25,9 @@ export const AppStateSchema = z.object({
   systemLang: z.enum(['en', 'pt-BR']),
   status: StatusSchema,
   running: z.boolean(), // starting or capturing
-  errorMessage: z.string().nullable(),
+  errorMessage: z.string().nullable(), // technical detail (logs/tooltip only)
+  errorKind: z.enum(['model', 'capture', 'unknown']).nullable(), // drives the user-facing message
+  vadInstalled: z.boolean(),
   permission: z.enum(['granted', 'denied', 'unknown']),
   settings: SettingsSchema,
   models: z.array(ModelStatusSchema),

@@ -40,7 +40,7 @@ export function ModelDownload({ model, t, compact }: { model: ModelStatusMsg; t:
     return (
       <div className={cx('flex items-center gap-2', compact ? '' : 'flex-wrap')}>
         <Button variant="primary" icon={Download} onClick={() => void api().request('model.download', model.id)}>{model.error ? t('action.retry') : t('action.downloadModel')}</Button>
-        {model.error && <span className="text-[12px] text-[var(--danger)]">{model.error}</span>}
+        {model.error && <span className="text-[12px] text-[var(--danger)]" title={model.error}>{t('model.downloadFailed')}</span>}
       </div>
     );
   }
@@ -52,7 +52,7 @@ export function ModelDownload({ model, t, compact }: { model: ModelStatusMsg; t:
         <button type="button" aria-label={t('action.cancel')} title={t('action.cancel')} onClick={() => void api().request('model.cancel', model.id)} className="rounded-full p-0.5 text-[var(--text-2)] hover:bg-[var(--surface-hover)]"><X size={14} strokeWidth={2} /></button>
       </div>
       <p className="mt-1 text-[12px] text-[var(--text-2)] tabular" aria-live="polite">
-        {d.phase === 'verifying' ? t('model.verifying') : t('model.downloading', { done: formatMB(d.received), total: formatMB(d.total), speed: formatSpeed(d.bytesPerSec) })}
+        {d.phase === 'verifying' ? t('model.verifying') : t('model.downloading', { done: formatMB(d.received), total: formatMB(d.total), speed: d.bytesPerSec > 0 ? formatSpeed(d.bytesPerSec) : '—' })}
       </p>
     </div>
   );

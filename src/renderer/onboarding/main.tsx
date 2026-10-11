@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { AppStateMsg } from '../../shared/appIpc';
 import { APP_NAME } from '../../shared/brand';
-import { MODELS } from '../../shared/models';
+import { MODELS, VAD_BYTES } from '../../shared/models';
+import { formatMB } from '../shared/format';
 import '../shared/base.css';
 import { api, useAppState, useLevel, useLive, useT } from '../shared/hooks';
 import { lastLines } from '../shared/liveReducer';
@@ -93,7 +94,7 @@ function Onboarding() {
           </Step>
         )}
         {step === 3 && (
-          <Step icon={<Cpu size={26} strokeWidth={1.75} />} title={t('onb.modelTitle')} body={t('onb.modelBody', { size: `${Math.round(MODELS[model.id].bytes / 1e6)}\u00A0MB` })}>
+          <Step icon={<Cpu size={26} strokeWidth={1.75} />} title={t('onb.modelTitle')} body={t('onb.modelBody', { size: formatMB(MODELS[model.id].bytes + (s.vadInstalled ? 0 : VAD_BYTES)) })}>
             {modelOk ? <Done label={t('onb.modelReady')} /> : <div className="text-left"><ModelDownload model={model} t={t} /></div>}
           </Step>
         )}

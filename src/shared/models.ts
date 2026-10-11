@@ -6,6 +6,8 @@
 import type { ModelIdT } from './settings';
 import type { StringKey } from './i18n';
 
+export const VAD_BYTES = 885_098; // Silero VAD, downloaded together with the first model
+
 export const MODELS: Record<ModelIdT, { label: StringKey; bytes: number; speed: StringKey; accuracy: StringKey; turns?: boolean }> = {
   'base.en': { label: 'modelName.base', bytes: 147_964_211, speed: 'rating.fastest', accuracy: 'rating.good' },
   'base.en-q5_1': { label: 'modelName.baseCompact', bytes: 59_721_011, speed: 'rating.fastest', accuracy: 'rating.good' },

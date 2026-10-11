@@ -3,7 +3,7 @@ import { formatTimestamp } from '../../shared/exporters';
 export const formatMB = (bytes: number) => `${Math.round(bytes / 1_000_000)}\u00A0MB`;
 
 export function formatSpeed(bps: number): string {
-  return bps >= 1_000_000 ? `${(bps / 1_000_000).toFixed(1)} MB` : `${Math.round(bps / 1000)} KB`;
+  return bps >= 1_000_000 ? `${(bps / 1_000_000).toFixed(1)}\u00A0MB/s` : `${Math.round(bps / 1000)}\u00A0KB/s`;
 }
 
 export function formatDuration(ms: number, lang: string): string {

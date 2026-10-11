@@ -8,6 +8,8 @@ import { api, useAppState, useCommand, useLevel, useLive, useT } from '../shared
 import { lastLines } from '../shared/liveReducer';
 import { currentModel, LevelMeter, ModelDownload, statusLabel, StatusDot } from '../shared/StatusBits';
 import { Button, Card, cx, IconButton, Kbd, Segmented, Select, Toggle } from '../shared/ui';
+import { formatMB } from '../shared/format';
+import { VAD_BYTES } from '../../shared/models';
 import { APP_NAME } from '../../shared/brand';
 
 const SIZES = [24, 28, 34, 40] as const;
@@ -83,12 +85,14 @@ function Panel() {
       {menu && <MoreMenu t={t} onClose={() => setMenu(false)} />}
 
       {/* primary control */}
-      <button ref={mainBtn} type="button" disabled={st === 'stopping' || (st === 'modelMissing' && !s.running)}
+      <button ref={mainBtn} type="button" disabled={st === 'stopping' || (!s.running && (st === 'modelMissing' || s.errorKind === 'model'))}
         onClick={() => void api().request('captions.toggle')}
         aria-label={s.running ? t('action.stop') : t('action.start')}
         className={cx('flex h-14 w-full items-center gap-3 rounded-[12px] px-4 text-left transition-colors duration-[var(--dur)] disabled:opacity-50',
-          s.running ? 'bg-[var(--glass-strong)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface)]' : 'bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-hover)] shadow-[0_1px_3px_rgba(0,0,0,.2)]')}>
-        <span className={cx('flex h-8 w-8 items-center justify-center rounded-full', s.running ? 'bg-[var(--surface-2)]' : 'bg-white/20')}>
+          s.running || st === 'modelMissing' || s.errorKind === 'model'
+            ? 'bg-[var(--glass-strong)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface)]' // the card below holds the primary action
+            : 'bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-hover)] shadow-[0_1px_3px_rgba(0,0,0,.2)]')}>
+        <span className={cx('flex h-8 w-8 items-center justify-center rounded-full', s.running || st === 'modelMissing' || s.errorKind === 'model' ? 'bg-[var(--surface-2)]' : 'bg-white/20')}>
           {s.running ? <Square size={14} strokeWidth={2.2} fill="currentColor" aria-hidden /> : <Play size={16} strokeWidth={2.2} fill="currentColor" aria-hidden className="ml-0.5" />}
         </span>
         <span className="flex-1 text-[15px] font-semibold">{s.running ? t('action.stop') : t('action.start')}</span>
@@ -111,7 +115,7 @@ function Panel() {
       {st === 'modelMissing' && (
         <Card tone="accent" className="p-3 fade-in">
           <p className="text-[13px] font-semibold">{t('model.missingTitle')}</p>
-          <p className="mt-0.5 mb-2 text-[12px] text-[var(--text-2)]">{t('model.missingBody', { size: `${Math.round(model.bytes / 1e6)}\u00A0MB` })}</p>
+          <p className="mt-0.5 mb-2 text-[12px] text-[var(--text-2)]">{t('model.missingBody', { size: formatMB(model.bytes + (s.vadInstalled ? 0 : VAD_BYTES)) })}</p>
           <ModelDownload model={model} t={t} />
         </Card>
       )}
@@ -121,8 +125,10 @@ function Panel() {
             <TriangleAlert size={18} strokeWidth={1.75} className="mt-0.5 shrink-0 text-[var(--danger)]" aria-hidden />
             <div className="flex-1">
               <p className="text-[13px] font-semibold">{t('state.error')}</p>
-              <p className="mt-0.5 text-[12px] text-[var(--text-2)]">{t('error.generic', { message: s.errorMessage ?? '' })}</p>
-              <Button className="mt-2" size="sm" onClick={() => void api().request('captions.toggle')}>{t('action.retry')}</Button>
+              <p className="mt-0.5 text-[12px] text-[var(--text-2)]" title={s.errorMessage ?? undefined}>{t(s.errorKind === 'model' ? 'error.model' : s.errorKind === 'capture' ? 'error.capture' : 'error.generic')}</p>
+              {s.errorKind === 'model'
+                ? <Button className="mt-2" size="sm" variant="primary" onClick={() => void api().request('model.download', s.settings.model)}>{t('action.redownload')}</Button>
+                : <Button className="mt-2" size="sm" onClick={() => void api().request('captions.toggle')}>{t('action.retry')}</Button>}
             </div>
           </div>
         </Card>
@@ -138,7 +144,7 @@ function Panel() {
             </p>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-[var(--text-2)]">
-              <MessageSquareText size={22} strokeWidth={1.5} aria-hidden className="opacity-70" />
+              {st !== 'modelMissing' && st !== 'error' && st !== 'permission' && <MessageSquareText size={22} strokeWidth={1.5} aria-hidden className="opacity-70" />}
               <p className="max-w-[230px] text-[13px]">{s.running ? t('panel.liveEmpty') : t('panel.liveIdle')}</p>
             </div>
           )}

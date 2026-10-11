@@ -72,6 +72,13 @@ function status(): Status {
   return 'idle';
 }
 
+/** Map technical failures to something the UI can explain and act on. */
+function errorKind(msg: string): 'model' | 'capture' | 'unknown' {
+  if (/load (VAD )?model|whisper-worker|Transcription failed/i.test(msg)) return 'model';
+  if (/audiotap|Audio capture|tap|aggregate/i.test(msg)) return 'capture';
+  return 'unknown';
+}
+
 function snapshot(): AppStateMsg {
   return AppStateSchema.parse({
     lang: lang(),
@@ -80,6 +87,8 @@ function snapshot(): AppStateMsg {
     status: status(),
     running: captions.state.state === 'starting' || captions.state.state === 'capturing',
     errorMessage: captions.state.state === 'error' ? captions.state.error : null,
+    errorKind: captions.state.state === 'error' ? errorKind(captions.state.error ?? '') : null,
+    vadInstalled: models.isInstalled('vad'),
     permission,
     settings: settings.get(),
     models: models.status(),
@@ -250,7 +259,13 @@ async function handleRequest(win: BrowserWindow | undefined, name: RequestName, 
     case 'overlay.setEdit': setEditMode(p as boolean); if (p) windows.hidePanel(); return true;
     case 'settings.update': settings.update(p as Partial<Settings>); return true;
     case 'settings.applyPreset': { const k = p as Settings['captionPreset']; settings.update({ captionPreset: k, ...PRESET_VALUES[k] }); return true; }
-    case 'model.download': void models.download(p as Settings['model']).then(() => broadcast()); return true;
+    case 'model.download': {
+      const id = p as Settings['model'];
+      // a model that failed to load is re-downloaded from scratch (size matched but content was bad)
+      if (captions.state.state === 'error' && errorKind(captions.state.error ?? '') === 'model') { await captions.stop(); models.remove(id); }
+      void models.download(id).then(() => broadcast());
+      return true;
+    }
     case 'model.cancel': models.cancel(p as Settings['model']); return true;
     case 'model.remove': if (!(p === settings.get().model && snapshot().running)) models.remove(p as Settings['model']); return true;
     case 'model.use': settings.update({ model: p as Settings['model'] }); return true;

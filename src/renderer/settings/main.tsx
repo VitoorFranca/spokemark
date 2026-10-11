@@ -162,7 +162,7 @@ function TranscriptionTab({ s, t }: { s: AppStateMsg; t: T }) {
                 </div>
                 {meta.turns && <p className="mt-0.5 text-[12px] text-[var(--text-2)]">{t('transcription.turns')}</p>}
                 {m.download && <div className="mt-2 max-w-[360px]"><ModelDownload model={m} t={t} /></div>}
-                {m.error && !m.download && <p className="mt-1 text-[12px] text-[var(--danger)]">{m.error}</p>}
+                {m.error && !m.download && <p className="mt-1 text-[12px] text-[var(--danger)]" title={m.error}>{t('model.downloadFailed')}</p>}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {!m.installed && !m.download && <Button size="sm" onClick={() => void api().request('model.download', id)}>{t('action.download')}</Button>}
