@@ -8,13 +8,13 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Launch the real app (dist build) with an isolated data dir and the real models. */
 export async function launch(env = {}) {
-  const dataDir = mkdtempSync(path.join(tmpdir(), 'earline-e2e-'));
+  const dataDir = mkdtempSync(path.join(tmpdir(), 'spokemark-e2e-'));
   const app = await electron.launch({
     args: [ROOT], cwd: ROOT,
-    env: { ...process.env, LC_E2E: '1', LC_DATA_DIR: dataDir, LC_MODELS_DIR: path.join(homedir(), 'Library/Application Support/Earline/models'), ...env },
+    env: { ...process.env, LC_E2E: '1', LC_DATA_DIR: dataDir, LC_MODELS_DIR: path.join(homedir(), 'Library/Application Support/Spokemark/models'), ...env },
   });
-  for (let i = 0; i < 150 && !(await app.evaluate(() => !!globalThis.__earline)); i++) await sleep(100);
-  const hook = (fn, ...args) => app.evaluate((_e, [f, a]) => globalThis.__earline[f](...a), [fn, args]);
+  for (let i = 0; i < 150 && !(await app.evaluate(() => !!globalThis.__spokemark)); i++) await sleep(100);
+  const hook = (fn, ...args) => app.evaluate((_e, [f, a]) => globalThis.__spokemark[f](...a), [fn, args]);
   const page = async (entry) => {
     for (let i = 0; i < 100; i++) {
       const p = app.windows().find((w) => w.url().includes(`${entry}.html`));

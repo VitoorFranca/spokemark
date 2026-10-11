@@ -14,8 +14,8 @@ mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const app = await electron.launch({ args: [ROOT], cwd: ROOT, env: { ...process.env, LC_E2E: '1', ...(process.env.SHOT_ENV ? JSON.parse(process.env.SHOT_ENV) : {}) } });
-for (let i = 0; i < 100 && !(await app.evaluate(() => !!globalThis.__earline)); i++) await sleep(100);
-const hook = (fn, arg) => app.evaluate((_e, [f, a]) => globalThis.__earline[f](...(a ?? [])), [fn, arg]);
+for (let i = 0; i < 100 && !(await app.evaluate(() => !!globalThis.__spokemark)); i++) await sleep(100);
+const hook = (fn, arg) => app.evaluate((_e, [f, a]) => globalThis.__spokemark[f](...(a ?? [])), [fn, arg]);
 const windowId = async (name) => {
   const ids = name === 'overlay' ? { overlay: await hook('overlayId') } : await hook('windowIds');
   return String(ids[name]).split(':')[1];
@@ -82,10 +82,10 @@ for (const theme of ['light', 'dark']) {
   }
   if (want('overlay')) {
     const p = await pageFor('panel');
-    await p.evaluate(() => window.earline.request('overlay.setEdit', true));
+    await p.evaluate(() => window.spokemark.request('overlay.setEdit', true));
     await sleep(600);
     await shot('overlay', `overlay-edit-${theme}`);
-    await p.evaluate(() => window.earline.request('overlay.setEdit', false));
+    await p.evaluate(() => window.spokemark.request('overlay.setEdit', false));
     await sleep(300);
   }
 }

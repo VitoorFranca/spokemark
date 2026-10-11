@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MIN="${1:-30}"; OUT="$2"; MODEL="${3:-}"
 F="$ROOT/tests/e2e/fixtures"
-APP="${APP:-$ROOT/release/Earline-darwin-arm64/Earline.app}"
+APP="${APP:-$ROOT/release/Spokemark-darwin-arm64/Spokemark.app}"
 PROC="$(basename "$APP" .app).app/Contents/MacOS"
 EXTRA_ENV=(); [ -n "${LC_MODELS_DIR:-}" ] && EXTRA_ENV=(--env "LC_MODELS_DIR=$LC_MODELS_DIR")
 mkdir -p "$OUT"; rm -f "$OUT"/{metrics,transcript,playlog}.jsonl

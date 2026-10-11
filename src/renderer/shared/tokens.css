@@ -1,4 +1,4 @@
-/* Earline design tokens (docs/BRAND.md). Light is default; dark follows the
+/* Spokemark design tokens (docs/BRAND.md). Light is default; dark follows the
    system appearance via nativeTheme -> prefers-color-scheme. */
 :root {
   color-scheme: light;

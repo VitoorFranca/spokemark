@@ -98,7 +98,7 @@ export type RequestPayload<K extends RequestName> = z.infer<(typeof Requests)[K]
 
 export const CH = { request: 'app:request', state: 'app:state', live: 'app:live', level: 'app:level', command: 'app:command', themeSync: 'app:theme-sync' } as const;
 
-export interface EarlineApi {
+export interface SpokemarkApi {
   initialDark?: boolean;
   request<K extends RequestName>(name: K, payload?: RequestPayload<K>): Promise<unknown>;
   onState(cb: (s: AppStateMsg) => void): () => void;

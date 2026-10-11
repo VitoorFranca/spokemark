@@ -1,4 +1,4 @@
-# Decisões de design (redesign Earline)
+# Decisões de design (redesign Spokemark)
 
 Cada item traz o que foi escolhido, as alternativas descartadas e o motivo. As medições foram feitas no MacBook Air M4 com macOS 26.6.2.
 

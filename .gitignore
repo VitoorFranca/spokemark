@@ -10,3 +10,5 @@ build/*
 tests/e2e/fixtures/*.aiff
 tests/e2e/fixtures/*.wav
 tests/e2e/dialogues/*.wav
+test-results/
+build/e2e-export/

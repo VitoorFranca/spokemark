@@ -47,15 +47,15 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 
 /* Slider: thin track filled with the accent up to the thumb, native-sized thumb. */
-.earline-range { -webkit-appearance: none; appearance: none; height: 20px; background: transparent; }
-.earline-range::-webkit-slider-runnable-track {
+.spokemark-range { -webkit-appearance: none; appearance: none; height: 20px; background: transparent; }
+.spokemark-range::-webkit-slider-runnable-track {
   height: 4px; border-radius: 2px;
   background: linear-gradient(to right, var(--accent) 0 var(--pct), var(--surface-2) var(--pct) 100%);
   box-shadow: inset 0 0 0 0.5px var(--border);
 }
-.earline-range::-webkit-slider-thumb {
+.spokemark-range::-webkit-slider-thumb {
   -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%;
   background: #fff; box-shadow: 0 0 0 0.5px rgba(0,0,0,.2), 0 1px 3px rgba(0,0,0,.25);
 }
-.earline-range:focus-visible { outline: none; }
-.earline-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--focus), 0 1px 3px rgba(0,0,0,.25); }
+.spokemark-range:focus-visible { outline: none; }
+.spokemark-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--focus), 0 1px 3px rgba(0,0,0,.25); }

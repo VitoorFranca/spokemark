@@ -2,7 +2,7 @@
 // function (names whitelisted) and validated subscriptions.
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { z } from 'zod';
-import { AppStateSchema, CH, CommandSchema, LiveEventSchema, Requests, type EarlineApi, type RequestName } from '../shared/appIpc';
+import { AppStateSchema, CH, CommandSchema, LiveEventSchema, Requests, type SpokemarkApi, type RequestName } from '../shared/appIpc';
 
 function subscribe<T>(channel: string, schema: z.ZodType<T>, cb: (v: T) => void): () => void {
   const h = (_e: IpcRendererEvent, raw: unknown) => {
@@ -13,7 +13,7 @@ function subscribe<T>(channel: string, schema: z.ZodType<T>, cb: (v: T) => void)
   return () => ipcRenderer.off(channel, h);
 }
 
-const api: EarlineApi = {
+const api: SpokemarkApi = {
   request(name, payload) {
     if (!Object.prototype.hasOwnProperty.call(Requests, name)) return Promise.reject(new Error(`unknown request ${String(name)}`));
     const p = Requests[name as RequestName].safeParse(payload);
@@ -30,4 +30,4 @@ const api: EarlineApi = {
 // nativeTheme.themeSource here), read once synchronously; later changes come with the state.
 api.initialDark = ipcRenderer.sendSync(CH.themeSync) === true;
 
-contextBridge.exposeInMainWorld('earline', api);
+contextBridge.exposeInMainWorld('spokemark', api);

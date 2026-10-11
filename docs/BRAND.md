@@ -1,20 +1,23 @@
-# Identidade visual
+# Identidade visual — Spokemark
 
-## Nome
+## Nome: **Spokemark**
 
-"Live Captions" colide com o recurso **Legendas ao Vivo** nativo do macOS. Candidatos, verificados em 11/10/2026:
-- **Domínio:** consulta RDAP no registro do `.app` (pubapi.registry.google). `404` significa domínio livre.
-- **Conflito:** busca na web por apps com o mesmo nome.
+*spoken* + *mark*: a marca do que foi dito. O nome foi escolhido amplo de propósito: serve para as legendas ao vivo de hoje e para a expansão planejada (transcrição de reuniões, histórico, atas), além de uma possível versão community open source.
 
-| # | Nome | Ideia | `.app` | Conflito óbvio |
-|---|---|---|---|---|
-| 1 | **Earline** (padrão) | *ear* + *line*: o ouvido vira linha de legenda | livre | nenhum encontrado |
-| 2 | **Lumeline** | linha iluminada sobre o vídeo | livre | nenhum encontrado (há apps "Lumi…" sem relação) |
-| 3 | **Sublio** | *sub*(title) + sufixo curto | livre | parecido com "Sublo", extensão de tradução de legendas para Chrome: risco de confusão |
+**Domínios em 11/10/2026**, consultados por RDAP (fonte oficial do registro; `404` significa não registrado):
+- **Fontes:** `spokemark.com` (Verisign) e `spokemark.app` (Google Registry).
+- **Resultado:** os dois estavam **livres**.
+- **Limite da checagem:** "Não registrado" não garante preço normal, porque o domínio pode ser reservado ou *premium*. É preciso confirmar num registrador antes de comprar.
+- **Conflito:** nenhum app ou produto com esse nome encontrado em busca na web. Não foi feita busca de marca registrada (INPI/USPTO).
 
-Descartados por domínio já registrado: subline, hearline, overhear, echoline, captio, captionly, legendo, linewise.
+**Histórico da escolha:**
+1. O primeiro nome proposto foi **Earline**, com `.app` livre e `.com` registrado. Foi descartado porque o `.com` não estava disponível.
+2. Na segunda rodada, ~130 candidatos foram testados com a exigência de `.com` **e** `.app` livres. Quase todo nome com palavra comum já tem o `.com` registrado.
+3. Passaram 8 nomes: Saidstone, Minuteloom, Wrenote, **Spokemark**, Quillear, Heardlight, Heardara e Larkscribe. Larkscribe tinha menção a um app de áudio com o mesmo nome; Minuteloom é próximo da marca Loom.
 
-O nome fica numa constante única, `APP_NAME` em `src/shared/brand.ts`. O `BUNDLE_ID` foi mantido do MVP porque a permissão TCC é atrelada a ele, e trocar o nome não deve exigir conceder a permissão de novo. A pasta de dados do MVP (`Live Captions`) é migrada uma vez na primeira execução.
+**Onde o nome está no código:** numa constante única, `APP_NAME` em `src/shared/brand.ts`, que também define o nome do pacote, os textos, a pasta de dados e o menu.
+- **Bundle ID:** continua o do MVP, para preservar a permissão TCC já concedida.
+- **Pasta de dados:** as pastas de builds anteriores ("Earline" e "Live Captions") são migradas uma vez.
 
 ## Cor de destaque: Brasa
 

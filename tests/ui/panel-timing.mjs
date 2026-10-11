@@ -1,7 +1,7 @@
 import { launch, sleep } from './helpers.mjs';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-const metrics = path.join(process.env.TMPDIR, `earline-panel-${Date.now()}.jsonl`);
+const metrics = path.join(process.env.TMPDIR, `spokemark-panel-${Date.now()}.jsonl`);
 const { app, hook } = await launch({ LC_SKIP_ONBOARDING: '1', LC_METRICS_FILE: metrics });
 await sleep(1500);
 // MODE=cold: click without hover. MODE=hover: pointer enters the icon ~250 ms before the click (warm-up).

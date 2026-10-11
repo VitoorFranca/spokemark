@@ -1,4 +1,4 @@
-# Live Captions (macOS)
+# Spokemark (macOS)
 
 Legendas em tempo real, no idioma original (inglês), para qualquer áudio que o Mac estiver tocando: Meet, Zoom, Discord, YouTube e outros. Funciona 100% local com whisper.cpp + Metal e captura o áudio por CoreAudio Process Tap, sem driver virtual e sem trocar o dispositivo de saída.
 
@@ -36,14 +36,14 @@ docs/DECISIONS.md                 decisões e alternativas descartadas
 npm install
 brew install cmake               # apenas para compilar o whisper.cpp
 npm run build:native             # build/bin/{audiotap,whisper-worker} (clona whisper.cpp v1.9.5 em vendor/)
-npm run models                   # base.en + Silero VAD (SHA-256 verificado) → ~/Library/Application Support/Live Captions/models
+npm run models                   # base.en + Silero VAD (SHA-256 verificado) → ~/Library/Application Support/Spokemark/models
 scripts/download-models.sh all   # + small.en, base.en-q5_1, small.en-q5_1
 scripts/download-models.sh small.en-tdrz   # opcional: marca troca de falante (menu Model → "small.en + speaker changes")
 npm run dev                      # Vite + Electron (permissão TCC herdada do terminal)
 npm test                         # testes unitários (vitest)
 npm run typecheck
 scripts/make-fixtures.sh         # gera os áudios dos testes E2E (say + jfk.wav)
-npm run package                  # release/Live Captions-darwin-arm64/Live Captions.app (assinatura ad hoc)
+npm run package                  # release/Spokemark-darwin-arm64/Spokemark.app (assinatura ad hoc)
 ```
 
 Para usar: abra o app. Aparece "CC" na barra de menus. Clique em **Start Captions** ou use ⌥⌘C. O ⌥⌘E alterna entre o modo click-through e o modo de edição (arrastar e redimensionar).
@@ -55,7 +55,7 @@ A captura de áudio do sistema exige a permissão **Gravação de Áudio do Sist
 | Modo | Quem recebe a permissão | Como conceder |
 |---|---|---|
 | `npm run dev` / CLI | o **terminal** que lançou o processo (ex.: iTerm2). Se o terminal não declarar `NSAudioCaptureUsageDescription` (caso do iTerm2), não aparece prompt e o tap entrega silêncio. | Ajustes do Sistema → Privacidade e Segurança → Gravação de Tela e Áudio do Sistema → seção **"Somente Gravação de Áudio do Sistema"** → **+** → selecione o terminal. |
-| App empacotado | **Live Captions.app** (declara `NSAudioCaptureUsageDescription` no Info.plist). | Prompt do sistema na primeira captura, ou o mesmo painel acima. |
+| App empacotado | **Spokemark.app** (declara `NSAudioCaptureUsageDescription` no Info.plist). | Prompt do sistema na primeira captura, ou o mesmo painel acima. |
 
 Com a permissão ausente, o app mostra "CC ⚠︎" e oferece **Open Privacy Settings…** no menu. Observações:
 - A assinatura ad hoc muda a cada build. Nos meus testes, reempacotar não fez o macOS pedir a permissão de novo, mas isso pode variar.
@@ -69,6 +69,6 @@ Veja a resposta final da sessão. As métricas brutas ficam em `docs/RESULTS.md`
 
 1. **Chamada real (Meet/Zoom/Discord):** abra o app, clique em Start, entre na chamada e confira se as legendas acompanham quem fala e se o áudio continua audível.
 2. **Fones com fio e Bluetooth / troca de saída:** com a captura ativa, troque a saída em Central de Controle → Som. O log deve mostrar `device-changed` e as legendas devem continuar.
-3. **Permissão negada → concedida:** em Ajustes, desligue Live Captions na lista "Somente Gravação de Áudio do Sistema" e clique em Start. Deve aparecer "CC ⚠︎" com a mensagem de permissão. Religue, clique em Stop e Start, e a captura deve voltar.
+3. **Permissão negada → concedida:** em Ajustes, desligue o Spokemark na lista "Somente Gravação de Áudio do Sistema" e clique em Start. Deve aparecer "CC ⚠︎" com a mensagem de permissão. Religue, clique em Stop e Start, e a captura deve voltar.
 4. **Tela cheia / Spaces:** coloque um vídeo em tela cheia (⌃⌘F) e confira se o overlay aparece por cima e em todos os Spaces.
 5. **Múltiplos monitores:** com o cursor no monitor 2, faça Hide/Show Overlay. O overlay deve abrir no monitor 2. Mova no modo de edição, trave e reabra: a posição deve ser lembrada por monitor.

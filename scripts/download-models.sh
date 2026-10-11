@@ -4,8 +4,10 @@
 # Usage: scripts/download-models.sh [base.en|small.en|base.en-q5_1|small.en-q5_1|small.en-tdrz|all]...
 #        (default: base.en + VAD)
 set -euo pipefail
-APP_DIR="$HOME/Library/Application Support/Earline"
-[ -d "$APP_DIR" ] || [ ! -d "$HOME/Library/Application Support/Live Captions" ] || APP_DIR="$HOME/Library/Application Support/Live Captions" # pre-rename install
+APP_DIR="$HOME/Library/Application Support/Spokemark"
+for old in Earline "Live Captions"; do # pre-rename installs
+  [ -d "$APP_DIR" ] || [ ! -d "$HOME/Library/Application Support/$old" ] || APP_DIR="$HOME/Library/Application Support/$old"
+done
 DEST="${LC_MODELS_DIR:-$APP_DIR/models}"
 WHISPER_REV="5359861c739e955e79d9a303bcbc70fb988958b1" # ggerganov/whisper.cpp
 VAD_REV="9ffd54a1e1ee413ddf265af9913beaf518d1639b"     # ggml-org/whisper-vad

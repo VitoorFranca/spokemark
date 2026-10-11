@@ -73,7 +73,7 @@ export function Slider({ value, min, max, step = 1, onChange, label, format }: {
   return (
     <div className="flex items-center gap-3 w-full">
       <input type="range" aria-label={label} aria-valuetext={format?.(value)} min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))}
-        className="earline-range flex-1" style={{ ['--pct' as string]: `${pct}%` }} />
+        className="spokemark-range flex-1" style={{ ['--pct' as string]: `${pct}%` }} />
       {format && <span className="tabular text-[12px] text-[var(--text-2)] w-11 text-right">{format(value)}</span>}
     </div>
   );

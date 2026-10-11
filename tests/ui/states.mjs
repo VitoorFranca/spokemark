@@ -8,9 +8,9 @@ import path from 'node:path';
 import { launch, ROOT, sleep } from './helpers.mjs';
 
 const OUT = process.env.SHOTS_DIR ?? path.join(ROOT, 'docs/screenshots');
-const models = mkdtempSync(path.join(tmpdir(), 'earline-models-'));
+const models = mkdtempSync(path.join(tmpdir(), 'spokemark-models-'));
 if (process.env.STATE === 'error') {
-  const real = path.join(homedir(), 'Library/Application Support/Earline/models');
+  const real = path.join(homedir(), 'Library/Application Support/Spokemark/models');
   copyFileSync(path.join(real, 'ggml-silero-v6.2.0.bin'), path.join(models, 'ggml-silero-v6.2.0.bin'));
   const fd = openSync(path.join(models, 'ggml-base.en.bin'), 'w'); ftruncateSync(fd, 147964211); closeSync(fd); // zeros
 }

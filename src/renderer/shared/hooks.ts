@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
-import type { AppStateMsg, Command, EarlineApi } from '../../shared/appIpc';
+import type { AppStateMsg, Command, SpokemarkApi } from '../../shared/appIpc';
 import { translate, type StringKey } from '../../shared/i18n';
 import { emptyLive, liveReducer } from './liveReducer';
 
-declare global { interface Window { earline: EarlineApi } }
-export const api = () => window.earline;
+declare global { interface Window { spokemark: SpokemarkApi } }
+export const api = () => window.spokemark;
 
 const applyTheme = (dark: boolean) => { document.documentElement.dataset.theme = dark ? 'dark' : 'light'; };
-applyTheme(window.earline?.initialDark === true); // before React renders anything
+applyTheme(window.spokemark?.initialDark === true); // before React renders anything
 
 /** Main-process state (source of truth), kept in sync over IPC. */
 export function useAppState(): AppStateMsg | null {

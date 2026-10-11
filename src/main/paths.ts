@@ -1,7 +1,7 @@
 import { existsSync, renameSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { APP_NAME, LEGACY_DATA_DIR_NAME } from '../shared/brand';
+import { APP_NAME, LEGACY_DATA_DIR_NAMES } from '../shared/brand';
 
 export { APP_NAME };
 
@@ -9,14 +9,16 @@ export function dataDir(): string {
   return process.env.LC_DATA_DIR ?? path.join(homedir(), 'Library', 'Application Support', APP_NAME);
 }
 
-/** One-time move of the MVP data folder (models, settings) to the new product name. */
+/** One-time move of an earlier build's data folder (models, settings, history) to the current name. */
 export function migrateLegacyDataDir(): boolean {
   if (process.env.LC_DATA_DIR) return false;
-  const legacy = path.join(homedir(), 'Library', 'Application Support', LEGACY_DATA_DIR_NAME);
   const target = dataDir();
-  if (legacy === target || existsSync(target) || !existsSync(legacy)) return false;
-  renameSync(legacy, target); // same volume: instant, models are not copied
-  return true;
+  if (existsSync(target)) return false;
+  for (const name of LEGACY_DATA_DIR_NAMES) {
+    const legacy = path.join(homedir(), 'Library', 'Application Support', name);
+    if (legacy !== target && existsSync(legacy)) { renameSync(legacy, target); return true; } // same volume: instant
+  }
+  return false;
 }
 
 export const MODELS = {

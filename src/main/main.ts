@@ -480,7 +480,7 @@ app.whenReady().then(async () => {
   }
   if (E2E.enabled) {
     // Test hooks for Playwright (main-process evaluate). They call the same functions as the UI.
-    (globalThis as Record<string, unknown>).__earline = {
+    (globalThis as Record<string, unknown>).__spokemark = {
       showPanel: () => windows.togglePanel(tray?.getBounds() ?? null),
       warmPanel: () => windows.warmPanel(),
       openWindow: (n: 'main' | 'settings' | 'onboarding', tab?: string) => windows.open(n, tab ? { tab } : {}),

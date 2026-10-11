@@ -1,9 +1,9 @@
 {
   "name": "live-captions",
-  "productName": "Earline",
+  "productName": "Spokemark",
   "version": "0.1.0",
   "private": true,
-  "description": "Earline \u2014 live captions for anything your Mac plays (CoreAudio Process Tap + whisper.cpp/Metal)",
+  "description": "Spokemark \u2014 live captions for anything your Mac plays (CoreAudio Process Tap + whisper.cpp/Metal)",
   "main": "dist/main/main.js",
   "type": "commonjs",
   "scripts": {

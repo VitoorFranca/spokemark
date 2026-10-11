@@ -12,7 +12,7 @@ const W = (s: string, t0 = 0): Word[] => s.split(' ').map((t, i) => ({ text: ` $
 let dir: string;
 let store: TranscriptStore;
 beforeEach(() => {
-  dir = mkdtempSync(path.join(tmpdir(), 'earline-store-'));
+  dir = mkdtempSync(path.join(tmpdir(), 'spokemark-store-'));
   store = new TranscriptStore(path.join(dir, 'history.sqlite'));
   store.init();
 });

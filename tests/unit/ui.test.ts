@@ -34,6 +34,6 @@ describe('i18n', () => {
     expect(resolveLang('system', ['de-DE'])).toBe('en');
     expect(resolveLang('en', ['pt-BR'])).toBe('en');
     expect(translate('pt-BR', 'history.words', { n: 12 })).toBe('12 palavras');
-    expect(translate('en', 'action.quit')).toBe('Quit Earline');
+    expect(translate('en', 'action.quit')).toBe('Quit Spokemark');
   });
 });
