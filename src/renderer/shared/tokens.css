@@ -1,0 +1,65 @@
+/* Earline design tokens (docs/BRAND.md). Light is default; dark follows the
+   system appearance via nativeTheme -> prefers-color-scheme. */
+:root {
+  color-scheme: light dark;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+
+  --bg: #F6F5F3;            /* window content */
+  --surface: #FFFFFF;       /* cards, rows */
+  --surface-2: #EFEDEA;     /* inset areas, segmented track */
+  --surface-hover: rgba(0, 0, 0, 0.045);
+  --text: #1C1B1A;
+  --text-2: #6B6863;        /* 5.1:1 on --bg */
+  --text-3: #8E8A84;        /* decorative / disabled only */
+  --border: rgba(0, 0, 0, 0.09);
+  --separator: rgba(0, 0, 0, 0.07);
+  --accent: #C2410C;        /* 5.2:1 with white text */
+  --accent-hover: #A8380A;
+  --accent-soft: rgba(194, 65, 12, 0.10);
+  --on-accent: #FFFFFF;
+  --success: #1E7B4A;
+  --success-soft: rgba(30, 123, 74, 0.10);
+  --warning: #A15C00;
+  --warning-soft: rgba(196, 120, 0, 0.12);
+  --danger: #C0261B;
+  --danger-soft: rgba(192, 38, 27, 0.10);
+  --focus: rgba(194, 65, 12, 0.45);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --dur: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1C1B1A;
+    --surface: #262524;
+    --surface-2: #2F2D2B;
+    --surface-hover: rgba(255, 255, 255, 0.06);
+    --text: #F2F0ED;
+    --text-2: #A19D97;      /* 6.4:1 on --bg */
+    --text-3: #77736D;
+    --border: rgba(255, 255, 255, 0.10);
+    --separator: rgba(255, 255, 255, 0.08);
+    --accent: #FF8A5B;      /* 7.4:1 on --bg */
+    --accent-hover: #FF9C73;
+    --accent-soft: rgba(255, 138, 91, 0.14);
+    --on-accent: #1A0F0A;   /* 8.1:1 on accent */
+    --success: #4CC38A;
+    --success-soft: rgba(76, 195, 138, 0.14);
+    --warning: #F0B43C;
+    --warning-soft: rgba(240, 180, 60, 0.14);
+    --danger: #FF6B5E;
+    --danger-soft: rgba(255, 107, 94, 0.14);
+    --focus: rgba(255, 138, 91, 0.55);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur: 0ms; }
+  *, *::before, *::after { animation-duration: 0ms !important; transition-duration: 0ms !important; }
+}
