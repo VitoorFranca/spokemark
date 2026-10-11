@@ -1,0 +1,38 @@
+{
+  "name": "live-captions",
+  "productName": "Live Captions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local real-time captions for macOS system audio (whisper.cpp + CoreAudio Process Tap)",
+  "main": "dist/main/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "build:native": "scripts/build-native.sh",
+    "models": "scripts/download-models.sh",
+    "build": "node scripts/build-main.mjs && vite build",
+    "dev": "node scripts/dev.mjs",
+    "start": "npm run build && electron .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "package": "npm run build && node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "44.7.0",
+    "esbuild": "0.28.2",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+release/
+vendor/
+build/*
+!build/macos/
+*.part
+.DS_Store
+# generated audio fixtures (scripts/make-fixtures.sh)
+tests/e2e/fixtures/*.aiff
+tests/e2e/fixtures/*.wav
+tests/e2e/dialogues/*.wav
