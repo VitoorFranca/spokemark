@@ -1,0 +1,61 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+}
+
+/* Resets live in the base layer so Tailwind utilities (utilities layer) win. */
+@layer base {
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  background: transparent; /* vibrancy shows through; content areas paint var(--bg) */
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none; user-select: none; /* interface text isn't selectable… */
+  cursor: default;
+  overflow: hidden;
+}
+.selectable, .selectable * { -webkit-user-select: text; user-select: text; cursor: text; } /* …transcripts are */
+button, [role="button"], [role="tab"], [role="switch"], select, a { cursor: default; } /* no hand cursor */
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-sm); }
+.drag { -webkit-app-region: drag; }
+.no-drag { -webkit-app-region: no-drag; }
+.tabular { font-variant-numeric: tabular-nums; }
+.scroll { overflow-y: auto; overscroll-behavior: contain; }
+.scroll::-webkit-scrollbar { width: 10px; }
+.scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+.fade-in { animation: fade-in var(--dur) var(--ease); }
+@keyframes fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+}
+
+/* Slider: thin track filled with the accent up to the thumb, native-sized thumb. */
+.earline-range { -webkit-appearance: none; appearance: none; height: 20px; background: transparent; }
+.earline-range::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) 0 var(--pct), var(--surface-2) var(--pct) 100%);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+}
+.earline-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 0 0.5px rgba(0,0,0,.2), 0 1px 3px rgba(0,0,0,.25);
+}
+.earline-range:focus-visible { outline: none; }
+.earline-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--focus), 0 1px 3px rgba(0,0,0,.25); }

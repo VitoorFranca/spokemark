@@ -5,5 +5,6 @@ await Promise.all([
   build({ ...common, entryPoints: ['src/main/main.ts'], outfile: 'dist/main/main.js' }),
   // sandboxed preload: everything (incl. zod) must be bundled into one CJS file
   build({ ...common, entryPoints: ['src/preload/overlay.ts'], outfile: 'dist/preload/overlay.js' }),
+  build({ ...common, entryPoints: ['src/preload/app.ts'], outfile: 'dist/preload/app.js' }),
   build({ ...common, entryPoints: ['src/cli/transcribe.ts'], outfile: 'dist/cli/transcribe.js' }),
 ]);

@@ -8,6 +8,7 @@ export const IPC = {
   rendered: 'overlay:rendered', // renderer -> main (ack for latency metrics)
   ready: 'overlay:ready', // renderer -> main
   resize: 'overlay:resize', // renderer -> main (edit mode only; transparent windows can't use native resize)
+  exitEdit: 'overlay:exit-edit', // renderer -> main (Esc in edit mode)
 } as const;
 
 export const SubtitleLineSchema = z.object({
@@ -23,10 +24,13 @@ export const SubtitleViewSchema = z.object({
 export type SubtitleViewMsg = z.infer<typeof SubtitleViewSchema>;
 
 export const AppearanceSchema = z.object({
+  captionPreset: z.enum(['default', 'contrast', 'cinema']),
+  captionFont: z.enum(['system', 'rounded', 'serif', 'mono']),
   fontSize: z.number().min(12).max(72),
-  opacity: z.number().min(0.1).max(1),
+  opacity: z.number().min(0).max(1),
   maxLines: z.number().int().min(1).max(5),
   editMode: z.boolean(),
+  editHint: z.string().max(120),
   status: z.enum(['idle', 'starting', 'capturing', 'stopping', 'error']),
   statusText: z.string().max(300),
 });
@@ -42,4 +46,5 @@ export interface OverlayApi {
   rendered(version: number): void;
   ready(): void;
   resize(width: number, height: number): void;
+  exitEdit(): void;
 }

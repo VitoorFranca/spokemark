@@ -1,7 +1,7 @@
 /* Earline design tokens (docs/BRAND.md). Light is default; dark follows the
    system appearance via nativeTheme -> prefers-color-scheme. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
 
   --bg: #F6F5F3;            /* window content */
@@ -33,8 +33,10 @@
   --ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* Dark tokens: the main process tells each window which theme macOS is using
+   (data-theme on <html>); the media query is only the pre-JS fallback. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #1C1B1A;
     --surface: #262524;
     --surface-2: #2F2D2B;
@@ -58,8 +60,51 @@
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1C1B1A;
+  --surface: #262524;
+  --surface-2: #2F2D2B;
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --text: #F2F0ED;
+  --text-2: #A19D97;      /* 6.4:1 on --bg */
+  --text-3: #77736D;
+  --border: rgba(255, 255, 255, 0.10);
+  --separator: rgba(255, 255, 255, 0.08);
+  --accent: #FF8A5B;      /* 7.4:1 on --bg */
+  --accent-hover: #FF9C73;
+  --accent-soft: rgba(255, 138, 91, 0.14);
+  --on-accent: #1A0F0A;   /* 8.1:1 on accent */
+  --success: #4CC38A;
+  --success-soft: rgba(76, 195, 138, 0.14);
+  --warning: #F0B43C;
+  --warning-soft: rgba(240, 180, 60, 0.14);
+  --danger: #FF6B5E;
+  --danger-soft: rgba(255, 107, 94, 0.14);
+  --focus: rgba(255, 138, 91, 0.55);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
 
 @media (prefers-reduced-motion: reduce) {
   :root { --dur: 0ms; }
   *, *::before, *::after { animation-duration: 0ms !important; transition-duration: 0ms !important; }
+}
+
+/* Translucent surfaces for windows with vibrancy (panel, sidebars, toolbars). */
+:root {
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-strong: rgba(255, 255, 255, 0.78);
+  --sidebar-selected: rgba(0, 0, 0, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --glass: rgba(255, 255, 255, 0.06);
+    --glass-strong: rgba(40, 39, 38, 0.72);
+    --sidebar-selected: rgba(255, 255, 255, 0.10);
+  }
+}
+:root[data-theme="dark"] {
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-strong: rgba(40, 39, 38, 0.72);
+  --sidebar-selected: rgba(255, 255, 255, 0.10);
 }

@@ -5,25 +5,26 @@ import { AppearanceSchema, IPC, RenderedAckSchema, ResizeSchema, SubtitleViewSch
 import type { SettingsService } from '../settings/SettingsService';
 
 const DEFAULT_WIDTH_RATIO = 0.6;
-const BOTTOM_MARGIN = 80;
+const EDGE_MARGIN = 80;
+
+type Look = Omit<Appearance, 'editMode' | 'status' | 'statusText' | 'editHint'>;
 
 /**
  * Transparent, frameless, always-on-top caption window.
  * - click-through mode (default): ignores the mouse entirely
- * - edit mode: draggable/resizable; bounds are remembered per display
- * Events: 'rendered'(version, ns)
+ * - edit mode: draggable/resizable (renderer handle); Esc finishes; bounds are remembered per display
+ * Events: 'rendered'(version, ns) 'edit-exit'()
  */
 export class OverlayManager extends EventEmitter {
   win: BrowserWindow | null = null;
   private editMode = false;
-  private appearance: Omit<Appearance, 'editMode'>;
+  private status: Pick<Appearance, 'status' | 'statusText'> = { status: 'idle', statusText: '' };
+  editHint = '';
   private lastView: SubtitleViewMsg = { version: 0, lines: [] };
   private saveTimer: NodeJS.Timeout | null = null;
 
   constructor(private readonly settings: SettingsService, private readonly rendererUrl: string | null) {
     super();
-    const s = settings.get();
-    this.appearance = { fontSize: s.fontSize, opacity: s.opacity, maxLines: s.maxLines, status: 'idle', statusText: '' };
     ipcMain.on(IPC.rendered, (e, raw: unknown) => {
       if (e.sender !== this.win?.webContents) return;
       const p = RenderedAckSchema.safeParse(raw);
@@ -36,8 +37,11 @@ export class OverlayManager extends EventEmitter {
       const b = this.win.getBounds();
       const wa = screen.getDisplayMatching(b).workArea;
       this.win.setBounds({ ...b, width: Math.min(p.data.width, wa.width), height: Math.min(p.data.height, wa.height) });
-      if (this.saveTimer) clearTimeout(this.saveTimer);
-      this.saveTimer = setTimeout(() => this.saveBounds(), 400);
+      this.persistSoon();
+    });
+    ipcMain.on(IPC.exitEdit, (e) => {
+      if (e.sender !== this.win?.webContents || !this.editMode) return;
+      this.emit('edit-exit');
     });
     ipcMain.on(IPC.ready, (e) => {
       if (e.sender !== this.win?.webContents) return;
@@ -46,16 +50,32 @@ export class OverlayManager extends EventEmitter {
     });
   }
 
-  private targetDisplay(): Display {
+  private look(): Look {
+    const s = this.settings.get();
+    return { captionPreset: s.captionPreset, captionFont: s.captionFont, fontSize: s.fontSize, opacity: s.opacity, maxLines: s.maxLines };
+  }
+
+  /** Display chosen in Settings, or the one under the pointer. */
+  targetDisplay(): Display {
+    const want = this.settings.get().captionDisplay;
+    if (want !== 'cursor') {
+      const d = screen.getAllDisplays().find((x) => String(x.id) === want);
+      if (d) return d;
+    }
     return screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  }
+
+  private height(): number {
+    const s = this.settings.get();
+    return Math.round(s.fontSize * 1.35 * s.maxLines + 36);
   }
 
   private defaultBounds(d: Display): Rectangle {
     const wa = d.workArea;
-    const s = this.settings.get();
-    const height = Math.round(s.fontSize * 1.45 * s.maxLines + 40);
+    const height = this.height();
     const width = Math.round(wa.width * DEFAULT_WIDTH_RATIO);
-    return { x: wa.x + Math.round((wa.width - width) / 2), y: wa.y + wa.height - height - BOTTOM_MARGIN, width, height };
+    const top = this.settings.get().captionPosition === 'top';
+    return { x: wa.x + Math.round((wa.width - width) / 2), y: top ? wa.y + EDGE_MARGIN / 2 : wa.y + wa.height - height - EDGE_MARGIN, width, height };
   }
 
   private boundsFor(d: Display): Rectangle {
@@ -63,16 +83,15 @@ export class OverlayManager extends EventEmitter {
     if (saved) {
       const wa = d.workArea;
       const inside = saved.x >= wa.x - 50 && saved.y >= wa.y - 50 && saved.x + saved.width <= wa.x + wa.width + 50 && saved.y + saved.height <= wa.y + wa.height + 50;
-      if (inside) return saved;
+      if (inside) return { ...saved, height: Math.max(saved.height, this.height()) };
     }
     return this.defaultBounds(d);
   }
 
   create(): BrowserWindow {
     if (this.win) return this.win;
-    const d = this.targetDisplay();
     const win = new BrowserWindow({
-      ...this.boundsFor(d),
+      ...this.boundsFor(this.targetDisplay()),
       type: 'panel', // floats above full-screen apps, on all Spaces
       transparent: true,
       frame: false,
@@ -102,17 +121,17 @@ export class OverlayManager extends EventEmitter {
     win.setContentProtection(this.settings.get().contentProtection);
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', (e) => e.preventDefault());
-    const persist = () => {
-      if (this.saveTimer) clearTimeout(this.saveTimer);
-      this.saveTimer = setTimeout(() => this.saveBounds(), 400);
-    };
-    win.on('moved', persist);
-    win.on('resized', persist);
+    win.on('moved', () => this.persistSoon());
     win.on('closed', () => { this.win = null; });
-    if (this.rendererUrl) void win.loadURL(this.rendererUrl);
-    else void win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+    if (this.rendererUrl) void win.loadURL(`${this.rendererUrl.replace(/\/$/, '')}/overlay.html`);
+    else void win.loadFile(path.join(__dirname, '..', 'renderer', 'overlay.html'));
     this.win = win;
     return win;
+  }
+
+  private persistSoon(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.saveBounds(), 400);
   }
 
   private saveBounds(): void {
@@ -124,12 +143,12 @@ export class OverlayManager extends EventEmitter {
 
   show(): void {
     const win = this.create();
-    // Re-open on the display under the cursor, at its remembered position.
     win.setBounds(this.boundsFor(this.targetDisplay()));
     win.showInactive();
   }
 
   hide(): void {
+    if (this.editMode) this.setEditMode(false);
     this.win?.hide();
   }
 
@@ -144,7 +163,8 @@ export class OverlayManager extends EventEmitter {
       w.setIgnoreMouseEvents(!on);
       w.setMovable(on); // resizing goes through the renderer's handle (transparent windows aren't natively resizable)
       w.setFocusable(on);
-      if (!on) this.saveBounds();
+      if (on) { w.show(); w.focus(); } // focus so Esc reaches the overlay
+      else this.saveBounds();
     }
     this.pushAppearance();
   }
@@ -157,23 +177,30 @@ export class OverlayManager extends EventEmitter {
     this.win?.setContentProtection(on);
   }
 
-  setAppearance(p: Partial<Omit<Appearance, 'editMode'>>): void {
-    this.appearance = { ...this.appearance, ...p };
-    if (p.fontSize !== undefined || p.maxLines !== undefined) {
-      // keep the window tall enough for the configured lines
-      const w = this.win;
-      if (w) {
+  setStatus(p: Partial<Pick<Appearance, 'status' | 'statusText'>>): void {
+    this.status = { ...this.status, ...p };
+    this.pushAppearance();
+  }
+
+  /** Caption look or placement changed in settings. */
+  relayout(opts: { resetPlacement?: boolean } = {}): void {
+    if (opts.resetPlacement) this.settings.update({ boundsByDisplay: {} });
+    const w = this.win;
+    if (w) {
+      if (opts.resetPlacement) w.setBounds(this.defaultBounds(this.targetDisplay()));
+      else {
+        // keep the bottom edge (or top edge when placed on top) while the height follows size/lines
         const b = w.getBounds();
-        const s = this.appearance;
-        const h = Math.round(s.fontSize * 1.45 * s.maxLines + 40);
-        w.setBounds({ ...b, y: b.y + b.height - h, height: h });
+        const h = this.height();
+        const top = this.settings.get().captionPosition === 'top';
+        w.setBounds({ ...b, y: top ? b.y : b.y + b.height - h, height: h });
       }
     }
     this.pushAppearance();
   }
 
   private pushAppearance(): void {
-    const a = AppearanceSchema.parse({ ...this.appearance, editMode: this.editMode });
+    const a = AppearanceSchema.parse({ ...this.look(), ...this.status, editMode: this.editMode, editHint: this.editHint });
     this.win?.webContents.send(IPC.appearance, a);
   }
 

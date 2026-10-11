@@ -1,128 +1,322 @@
-import { app, globalShortcut, Menu, nativeImage, shell, Tray, type MenuItemConstructorOptions } from 'electron';
-import { appendFileSync } from 'node:fs';
+import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, Menu, nativeImage, nativeTheme, screen, shell, Tray, type MenuItemConstructorOptions } from 'electron';
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { AppStateSchema, CH, Requests, type AppStateMsg, type LiveEvent, type RequestName, type Status } from '../shared/appIpc';
+import { APP_NAME } from '../shared/brand';
+import { toMd, toSrt, toTxt } from '../shared/exporters';
+import { LANG_NAMES, resolveLang, translate, type Lang, type StringKey } from '../shared/i18n';
+import { PRESET_VALUES, type Settings } from '../shared/settings';
+import { isTurn, type Word } from './asr/localAgreement';
+import type { TranscriptUpdate } from './asr/TranscriptionProvider';
 import { CaptionsController, type Indicator } from './CaptionsController';
 import { Metrics, percentile } from './metrics';
+import { ModelManager } from './models/ModelManager';
 import { killAllChildren } from './native/ChildSupervisor';
 import { OverlayManager } from './overlay/OverlayManager';
-import { availableModels, MODELS, type ModelId } from './paths';
+import { dataDir, migrateLegacyDataDir } from './paths';
+import { checkPermission, PRIVACY_PANE_URL, requestPermission, type PermissionState } from './permissions';
 import { SettingsService } from './settings/SettingsService';
-import type { Word } from './asr/localAgreement';
+import { TranscriptStore } from './store/TranscriptStore';
 import type { SubtitleView } from './subtitles/SubtitleManager';
-import type { TranscriptUpdate } from './asr/TranscriptionProvider';
+import { WindowManager } from './ui/WindowManager';
 
-// Optional instrumentation for automated end-to-end runs (no effect otherwise).
+// ---- identity & data location (before 'ready') ------------------------------
+app.setName(APP_NAME);
+try { migrateLegacyDataDir(); } catch (e) { console.error('[main] data migration failed', e); }
+app.setPath('userData', dataDir());
+
 const E2E = {
+  enabled: process.env.LC_E2E === '1',
   autostart: process.env.LC_E2E_AUTOSTART === '1',
   metricsFile: process.env.LC_METRICS_FILE ?? null,
   transcriptFile: process.env.LC_TRANSCRIPT_FILE ?? null,
   metricsIntervalMs: Number(process.env.LC_METRICS_INTERVAL_MS ?? 60_000),
+  exportDir: process.env.LC_E2E_EXPORT_DIR ?? null,
+  autoConfirm: process.env.LC_E2E_CONFIRM === '1',
 };
-
-const SHORTCUT_TOGGLE = 'CommandOrControl+Alt+C';
-const SHORTCUT_EDIT = 'CommandOrControl+Alt+E';
-const PRIVACY_URL = 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture';
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
-let tray: Tray | null = null;
-let overlay: OverlayManager;
-let captions: CaptionsController;
 let settings: SettingsService;
+let store: TranscriptStore;
+let models: ModelManager;
+let captions: CaptionsController;
+let overlay: OverlayManager;
+let windows: WindowManager;
 let metrics: Metrics;
+let tray: Tray | null = null;
+let permission: PermissionState = 'unknown';
+let historyRevision = 0;
+let shortcutErrors: AppStateMsg['shortcutErrors'] = [];
+let provisionalText = '';
 let quitting = false;
+const trayIcons: Record<'idle' | 'listening', Electron.NativeImage> = { idle: nativeImage.createEmpty(), listening: nativeImage.createEmpty() };
 
-const log = (l: string) => { if (process.env.LC_VERBOSE || /error|fail|started|format|permission|device|exit/i.test(l)) console.log(l); };
+const log = (l: string) => { if (process.env.LC_VERBOSE || /error|fail|started|format|permission|device|exit|panel/i.test(l)) console.log(l); };
+const lang = (): Lang => resolveLang(settings.get().language, app.getPreferredSystemLanguages());
+const t = (k: StringKey, v?: Record<string, string | number>) => translate(lang(), k, v);
 
-function indicatorTitle(i: Indicator): string {
-  switch (i) {
-    case 'capturing': return 'CC ●';
-    case 'processing': return 'CC ◐';
-    case 'starting': return 'CC …';
-    case 'silent': return 'CC ○';
-    case 'permission': return 'CC ⚠︎';
-    case 'error': return 'CC ✕';
-    default: return 'CC';
+// ---- state ------------------------------------------------------------------
+
+function status(): Status {
+  const st = captions.state.state;
+  if (st === 'starting') return 'loading';
+  if (st === 'stopping') return 'stopping';
+  if (st === 'error') return captions.state.error === 'permission-denied' ? 'permission' : 'error';
+  if (st === 'capturing') {
+    const i: Indicator = captions.indicator;
+    return i === 'permission' ? 'permission' : i === 'silent' ? 'silent' : i === 'processing' ? 'processing' : 'listening';
+  }
+  if (!models.isReady(settings.get().model)) return 'modelMissing';
+  if (permission === 'denied') return 'permission';
+  return 'idle';
+}
+
+function snapshot(): AppStateMsg {
+  return AppStateSchema.parse({
+    lang: lang(),
+    dark: nativeTheme.shouldUseDarkColors,
+    systemLang: resolveLang('system', app.getPreferredSystemLanguages()),
+    status: status(),
+    running: captions.state.state === 'starting' || captions.state.state === 'capturing',
+    errorMessage: captions.state.state === 'error' ? captions.state.error : null,
+    permission,
+    settings: settings.get(),
+    models: models.status(),
+    overlay: { visible: overlay.visible, editMode: overlay.isEditMode },
+    displays: screen.getAllDisplays().map((d, i) => ({ id: String(d.id), label: d.label || `Display ${i + 1}` })),
+    shortcutErrors,
+    historyRevision,
+    sources: captions.sources,
+    app: { version: app.getVersion(), dataDir: dataDir() },
+  });
+}
+
+let broadcastTimer: NodeJS.Timeout | null = null;
+/** Coalesced state push to every app window (the overlay has its own channel). */
+function broadcast(): void {
+  if (broadcastTimer) return;
+  broadcastTimer = setTimeout(() => {
+    broadcastTimer = null;
+    const s = snapshot();
+    for (const w of windows.subscribers) w.webContents.send(CH.state, s);
+    updateTray(s.status);
+  }, 16);
+}
+
+function sendLive(e: LiveEvent): void {
+  for (const w of windows.subscribers) {
+    if (w === windows.get('panel') && !w.isVisible()) continue; // hidden panel resyncs on show
+    w.webContents.send(CH.live, e);
   }
 }
 
-function indicatorLabel(i: Indicator): string {
-  return {
-    idle: 'Idle',
-    starting: 'Starting…',
-    capturing: 'Capturing system audio',
-    processing: 'Capturing · transcribing',
-    silent: 'Capturing · no audio playing',
-    permission: 'Permission needed: System Audio Recording',
-    error: `Error: ${captions.state.error ?? ''}`,
-  }[i];
+let tailTimer: NodeJS.Timeout | null = null;
+function sendTailSoon(): void {
+  if (tailTimer) return;
+  tailTimer = setTimeout(() => { tailTimer = null; sendLive({ type: 'tail', open: store.openText, provisional: provisionalText }); }, 120);
 }
 
-async function toggleCaptions(): Promise<void> {
-  const s = captions.state.state;
-  if (s === 'capturing' || s === 'starting') await captions.stop();
-  else if (s === 'idle' || s === 'error') {
-    if (settings.get().overlayVisible) overlay.show();
-    await captions.start();
+function liveReset(): LiveEvent {
+  return { type: 'reset', startedAt: store.liveStartedAt, segments: [...store.liveSegments] };
+}
+
+// ---- tray / menus / shortcuts ----------------------------------------------------
+
+function loadTrayIcons(): void {
+  const dir = app.isPackaged ? path.join(process.resourcesPath, 'tray') : path.join(__dirname, '..', '..', 'assets', 'tray');
+  for (const k of ['idle', 'listening'] as const) {
+    const img = nativeImage.createFromPath(path.join(dir, `tray${k === 'idle' ? 'Idle' : 'Listening'}Template.png`));
+    img.setTemplateImage(true);
+    trayIcons[k] = img;
   }
+}
+
+let lastTrayState = '';
+function updateTray(s: Status): void {
+  if (!tray) return;
+  const listening = s === 'listening' || s === 'processing' || s === 'silent' || s === 'loading';
+  const key = `${listening}|${s}|${lang()}`;
+  if (key === lastTrayState) return;
+  lastTrayState = key;
+  tray.setImage(listening ? trayIcons.listening : trayIcons.idle);
+  tray.setToolTip(`${APP_NAME} — ${t(`state.${s === 'processing' ? 'listening' : s}` as StringKey)}`);
+}
+
+function buildAppMenu(): void {
+  const tpl: MenuItemConstructorOptions[] = [
+    {
+      label: APP_NAME,
+      submenu: [
+        { label: t('action.about'), click: () => windows.open('settings', { tab: 'about' }) },
+        { type: 'separator' },
+        { label: t('action.openSettings'), accelerator: 'Command+,', click: () => windows.open('settings') },
+        { type: 'separator' },
+        { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' },
+        { type: 'separator' },
+        { label: t('action.quit'), accelerator: 'Command+Q', click: () => app.quit() },
+      ],
+    },
+    {
+      label: t('menu.edit'),
+      submenu: [
+        { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
+        { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
+        { type: 'separator' },
+        { label: t('menu.find'), accelerator: 'Command+F', click: () => { const w = windows.open('main'); w.webContents.send(CH.command, { type: 'focus-search' }); } },
+      ],
+    },
+    {
+      label: t('menu.window'),
+      submenu: [
+        { role: 'minimize' }, { role: 'close', accelerator: 'Command+W' }, { type: 'separator' },
+        { label: t('menu.showMain'), accelerator: 'Command+0', click: () => windows.open('main') },
+        { type: 'separator' }, { role: 'front' },
+      ],
+    },
+    {
+      label: t('menu.help'),
+      role: 'help',
+      submenu: [
+        { label: t('menu.privacy'), click: () => windows.open('settings', { tab: 'privacy' }) },
+        { label: t('about.reveal'), click: () => void shell.openPath(dataDir()) },
+      ],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(tpl));
+}
+
+type ShortcutKey = keyof Pick<Settings, 'shortcutToggle' | 'shortcutOverlay' | 'shortcutEdit'>;
+function registerShortcuts(): void {
+  globalShortcut.unregisterAll();
+  const s = settings.get();
+  const map: [ShortcutKey, () => void][] = [
+    ['shortcutToggle', () => void toggleCaptions()],
+    ['shortcutOverlay', () => setOverlayVisible(!overlay.visible)],
+    ['shortcutEdit', () => setEditMode(!overlay.isEditMode)],
+  ];
+  shortcutErrors = [];
+  for (const [k, fn] of map) {
+    let ok = false;
+    try { ok = globalShortcut.register(s[k], fn); } catch { ok = false; }
+    if (!ok) shortcutErrors.push(k);
+  }
+}
+
+// ---- actions --------------------------------------------------------------------
+
+async function toggleCaptions(): Promise<{ ok: boolean; reason?: string }> {
+  const st = captions.state.state;
+  if (st === 'capturing' || st === 'starting') { await captions.stop(); return { ok: true }; }
+  if (st === 'stopping') return { ok: false, reason: 'busy' };
+  if (!models.isReady(settings.get().model)) { broadcast(); return { ok: false, reason: 'modelMissing' }; }
+  if (settings.get().overlayVisible) overlay.show();
+  await captions.start();
+  return { ok: true };
+}
+
+function setOverlayVisible(v: boolean): void {
+  if (v) overlay.show(); else overlay.hide();
+  settings.update({ overlayVisible: v });
+  broadcast();
 }
 
 function setEditMode(on: boolean): void {
+  if (on && !overlay.visible) { overlay.show(); settings.update({ overlayVisible: true }); }
   overlay.setEditMode(on);
-  if (on && !overlay.visible) overlay.show();
-  rebuildMenu();
+  broadcast();
 }
 
-function rebuildMenu(): void {
-  if (!tray) return;
-  const s = settings.get();
-  const st = captions.state.state;
-  const running = st === 'capturing' || st === 'starting';
-  const models = availableModels();
-  const sizes = [20, 24, 28, 32, 40, 48];
-  const opacities = [0.3, 0.45, 0.6, 0.75, 0.9];
-  const tpl: MenuItemConstructorOptions[] = [
-    { label: indicatorLabel(captions.indicator), enabled: false },
-    ...(captions.indicator === 'permission' || captions.indicator === 'error'
-      ? [{ label: 'Open Privacy Settings…', click: () => void shell.openExternal(PRIVACY_URL) }]
-      : []),
-    { type: 'separator' },
-    { label: running ? 'Stop Captions' : 'Start Captions', accelerator: SHORTCUT_TOGGLE, click: () => void toggleCaptions() },
-    { label: overlay.visible ? 'Hide Overlay' : 'Show Overlay', click: () => {
-      if (overlay.visible) { overlay.hide(); settings.update({ overlayVisible: false }); }
-      else { overlay.show(); settings.update({ overlayVisible: true }); }
-      rebuildMenu();
-    } },
-    { type: 'separator' },
-    { label: 'Click-through (locked)', type: 'radio', checked: !overlay.isEditMode, click: () => setEditMode(false) },
-    { label: 'Edit (move / resize)', type: 'radio', checked: overlay.isEditMode, accelerator: SHORTCUT_EDIT, click: () => setEditMode(true) },
-    { type: 'separator' },
-    {
-      label: 'Model',
-      submenu: (Object.keys(MODELS) as ModelId[]).map((m) => ({
-        label: (m === 'small.en-tdrz' ? 'small.en + speaker changes' : m) + (models.includes(m) ? '' : ' (not downloaded)'),
-        type: 'radio' as const,
-        enabled: models.includes(m),
-        checked: s.model === m,
-        click: () => { settings.update({ model: m }); void captions.setModel(m); },
-      })),
-    },
-    { label: 'Font Size', submenu: sizes.map((f) => ({ label: `${f} pt`, type: 'radio' as const, checked: s.fontSize === f, click: () => settings.update({ fontSize: f }) })) },
-    { label: 'Background Opacity', submenu: opacities.map((o) => ({ label: `${Math.round(o * 100)}%`, type: 'radio' as const, checked: Math.abs(s.opacity - o) < 0.01, click: () => settings.update({ opacity: o }) })) },
-    { label: 'Lines', submenu: [1, 2, 3].map((n) => ({ label: String(n), type: 'radio' as const, checked: s.maxLines === n, click: () => settings.update({ maxLines: n }) })) },
-    { label: 'Hide Overlay From Screen Sharing', type: 'checkbox', checked: s.contentProtection, click: (i) => settings.update({ contentProtection: i.checked }) },
-    { type: 'separator' },
-    { label: 'Quit Live Captions', accelerator: 'Command+Q', click: () => app.quit() },
-  ];
-  tray.setContextMenu(Menu.buildFromTemplate(tpl));
-  tray.setTitle(indicatorTitle(captions.indicator));
-  tray.setToolTip(`Live Captions — ${indicatorLabel(captions.indicator)}`);
+async function confirm(win: BrowserWindow | undefined, message: string): Promise<boolean> {
+  if (E2E.autoConfirm) return true;
+  const opts = { type: 'warning' as const, message, detail: t('history.confirmDetail'), buttons: [t('action.delete'), t('action.cancel')], defaultId: 1, cancelId: 1 };
+  const r = win ? await dialog.showMessageBox(win, opts) : await dialog.showMessageBox(opts);
+  return r.response === 0;
 }
+
+const RANGE_START: Record<'today' | 'week' | 'month' | 'all', () => number> = {
+  today: () => new Date(new Date().setHours(0, 0, 0, 0)).getTime(),
+  week: () => Date.now() - 7 * 86_400_000,
+  month: () => Date.now() - 30 * 86_400_000,
+  all: () => 0,
+};
+
+async function handleRequest(win: BrowserWindow | undefined, name: RequestName, p: unknown): Promise<unknown> {
+  switch (name) {
+    case 'state.get': return snapshot();
+    case 'live.subscribe': return liveReset();
+    case 'captions.toggle': { const r = await toggleCaptions(); broadcast(); return r; }
+    case 'overlay.setVisible': setOverlayVisible(p as boolean); return true;
+    case 'overlay.setEdit': setEditMode(p as boolean); if (p) windows.hidePanel(); return true;
+    case 'settings.update': settings.update(p as Partial<Settings>); return true;
+    case 'settings.applyPreset': { const k = p as Settings['captionPreset']; settings.update({ captionPreset: k, ...PRESET_VALUES[k] }); return true; }
+    case 'model.download': void models.download(p as Settings['model']).then(() => broadcast()); return true;
+    case 'model.cancel': models.cancel(p as Settings['model']); return true;
+    case 'model.remove': if (!(p === settings.get().model && snapshot().running)) models.remove(p as Settings['model']); return true;
+    case 'model.use': settings.update({ model: p as Settings['model'] }); return true;
+    case 'permission.request': permission = await requestPermission(); broadcast(); schedulePermissionPoll(); return permission;
+    case 'permission.openSettings': await shell.openExternal(PRIVACY_PANE_URL); return true;
+    case 'window.open': {
+      const o = p as { window: 'main' | 'settings' | 'onboarding'; tab?: string };
+      windows.hidePanel();
+      windows.open(o.window, o.tab ? { tab: o.tab } : {});
+      return true;
+    }
+    case 'history.list': return store.listSessions(p as { query?: string });
+    case 'history.get': return store.getSession(p as number);
+    case 'history.export': return exportSession(win, p as { id: number; format: 'txt' | 'srt' | 'md' });
+    case 'history.delete': {
+      if (!(await confirm(win, t('history.confirmDelete')))) return false;
+      store.deleteSession(p as number);
+      return true;
+    }
+    case 'history.deleteRange': {
+      const r = p as keyof typeof RANGE_START;
+      const label = t(`history.range.${r}` as StringKey);
+      if (!(await confirm(win, r === 'all' ? t('privacy.deleteAllConfirm') : t('history.confirmRange', { range: label.toLowerCase() })))) return false;
+      return store.deleteRange(RANGE_START[r](), Number.MAX_SAFE_INTEGER);
+    }
+    case 'copy.text': clipboard.writeText(p as string); return true;
+    case 'app.quit': app.quit(); return true;
+    case 'app.revealData': await shell.openPath(dataDir()); return true;
+    case 'onboarding.complete': settings.update({ onboardingDone: true }); windows.get('onboarding')?.close(); return true;
+    case 'panel.hide': windows.hidePanel(); return true;
+    case 'panel.rendered': {
+      const ms = performance.now() - windows.panelShownAt;
+      log(`[panel] open-to-paint ${ms.toFixed(1)} ms`);
+      if (E2E.metricsFile) appendFileSync(E2E.metricsFile, JSON.stringify({ t: new Date().toISOString(), panelOpenMs: ms }) + '\n');
+      return ms;
+    }
+  }
+  return null;
+}
+
+async function exportSession(win: BrowserWindow | undefined, o: { id: number; format: 'txt' | 'srt' | 'md' }): Promise<{ ok: boolean; path?: string }> {
+  const s = store.getSession(o.id);
+  if (!s) return { ok: false };
+  const d = new Date(s.startedAt);
+  const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`;
+  const name = `${APP_NAME} ${stamp}.${o.format}`;
+  const content = o.format === 'srt' ? toSrt(s) : o.format === 'md' ? toMd(s, `${APP_NAME} — ${d.toLocaleString(lang())}`, lang()) : toTxt(s);
+  let file: string | undefined;
+  if (E2E.exportDir) { mkdirSync(E2E.exportDir, { recursive: true }); file = path.join(E2E.exportDir, name); }
+  else {
+    const opts = { defaultPath: path.join(app.getPath('documents'), name), filters: [{ name: o.format.toUpperCase(), extensions: [o.format] }] };
+    const r = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts);
+    if (r.canceled || !r.filePath) return { ok: false };
+    file = r.filePath;
+  }
+  writeFileSync(file, content, 'utf8');
+  return { ok: true, path: file };
+}
+
+// ---- lifecycle --------------------------------------------------------------------
 
 async function shutdown(): Promise<void> {
   globalShortcut.unregisterAll();
   try { await captions.stop(); } catch { /* ignore */ }
-  killAllChildren('SIGKILL'); // belt and braces: nothing may outlive us
+  try { store.close(); } catch { /* ignore */ }
+  killAllChildren('SIGKILL'); // nothing may outlive us
   settings.flush();
 }
 
@@ -135,70 +329,152 @@ app.on('before-quit', (e) => {
 process.on('uncaughtException', (err) => { console.error('[main] uncaught', err); killAllChildren('SIGKILL'); process.exit(1); });
 process.on('SIGTERM', () => app.quit());
 process.on('SIGINT', () => app.quit());
-// E2E control: SIGUSR1 toggles Start/Stop (used by the stop/start cycle test).
+// E2E control (same code paths as the UI): SIGUSR1 toggles captions, SIGUSR2 cycles installed models.
 process.on('SIGUSR1', () => void toggleCaptions());
-// E2E control: SIGUSR2 switches to the next downloaded model (same path as the tray menu).
 process.on('SIGUSR2', () => {
-  const ms = availableModels();
-  const next = ms[(ms.indexOf(settings.get().model) + 1) % ms.length]!;
+  const installed = models.status().filter((m) => m.installed).map((m) => m.id);
+  const next = installed[(installed.indexOf(settings.get().model) + 1) % installed.length]!;
   console.log(`[main] switching model -> ${next}`);
   settings.update({ model: next });
-  void captions.setModel(next);
 });
+app.on('second-instance', () => windows?.open('main'));
+app.on('activate', () => windows?.open('main')); // Dock click
+app.on('window-all-closed', () => { /* menu bar app: keep running */ });
 
-app.whenReady().then(() => {
-  app.dock?.hide(); // menu bar app (LSUIElement in the packaged Info.plist)
-  settings = new SettingsService(path.join(app.getPath('userData'), 'settings.json'));
+let permTimer: NodeJS.Timeout | null = null;
+/** Poll permission only while someone can see it change (onboarding, settings, panel) and it isn't granted. */
+function schedulePermissionPoll(): void {
+  if (permTimer || permission === 'granted') return;
+  permTimer = setTimeout(async () => {
+    permTimer = null;
+    const watching = windows.get('onboarding') || windows.get('settings') || windows.get('panel')?.isVisible();
+    if (!watching) return;
+    const p = await checkPermission();
+    if (p !== permission) { permission = p; broadcast(); }
+    schedulePermissionPoll();
+  }, 1500);
+}
+
+app.whenReady().then(async () => {
+  settings = new SettingsService(path.join(dataDir(), 'settings.json'));
+  const s0 = settings.get();
+  store = new TranscriptStore(path.join(dataDir(), 'history.sqlite'));
+  store.init();
+  store.persist = s0.historyEnabled;
+  store.applyRetention(s0.retentionDays);
+  setInterval(() => store.applyRetention(settings.get().retentionDays), 6 * 3_600_000);
+  models = new ModelManager();
   metrics = new Metrics(E2E.metricsFile);
-  const s = settings.get();
-  captions = new CaptionsController(s.model, { maxLines: s.maxLines, maxCharsPerLine: 64 });
+  captions = new CaptionsController(s0.model, { maxLines: s0.maxLines, maxCharsPerLine: 64 });
+  windows = new WindowManager(process.env.VITE_DEV_SERVER_URL ?? null);
+  windows.dockAlways = s0.dockAlways;
+  windows.updateDock();
   overlay = new OverlayManager(settings, process.env.VITE_DEV_SERVER_URL ?? null);
+  overlay.editHint = t('overlay.editHint');
   overlay.create();
+  permission = await checkPermission();
 
+  // pipeline -> UI
   captions.on('view', (v: SubtitleView, newWords: Word[]) => {
     const cap = captions.captureTimeOf;
     if (cap) metrics.trackVersion(v.version, newWords.map((w) => cap(w.end)).filter((x): x is bigint => x !== null));
     overlay.sendView(v);
   });
   overlay.on('rendered', (version: number, ns: bigint) => metrics.onRendered(version, ns));
-  captions.on('indicator', (i: Indicator, text: string) => {
-    overlay.setAppearance({ status: captions.state.state, statusText: text || indicatorLabel(i) });
-    rebuildMenu();
+  overlay.on('edit-exit', () => setEditMode(false));
+  captions.on('indicator', (_i: Indicator, text: string) => {
+    overlay.setStatus({ status: captions.state.state, statusText: text });
+    broadcast();
   });
+  captions.state.on('change', () => broadcast());
   captions.on('log', log);
-  if (E2E.transcriptFile) {
-    const f = E2E.transcriptFile;
-    captions.on('update', (u: TranscriptUpdate) => {
-      if (u.confirmed.length) appendFileSync(f, JSON.stringify({ t: Date.now(), words: u.confirmed.map((w) => w.text.trim()), end: u.utteranceEnd }) + '\n');
-    });
-  }
+  captions.on('session', (what: 'started' | 'ended') => {
+    if (what === 'started') { store.persist = settings.get().historyEnabled; store.startSession(settings.get().model); provisionalText = ''; sendLive(liveReset()); }
+    else { store.endSession(); provisionalText = ''; sendTailSoon(); }
+  });
+  captions.on('update', (u: TranscriptUpdate) => {
+    store.addConfirmed(u.confirmed, u.utteranceEnd);
+    provisionalText = u.provisional.filter((w) => !isTurn(w)).map((w) => w.text.trim()).filter(Boolean).join(' ');
+    sendTailSoon();
+    if (E2E.transcriptFile && u.confirmed.length) appendFileSync(E2E.transcriptFile, JSON.stringify({ t: Date.now(), words: u.confirmed.map((w) => w.text.trim()), end: u.utteranceEnd }) + '\n');
+  });
+  captions.on('sources', (apps: string[]) => { for (const a of apps) store.noteSourceApp(a); broadcast(); });
+  captions.on('level', (db: number) => {
+    for (const name of ['panel', 'onboarding'] as const) {
+      const w = windows.get(name);
+      if (w?.isVisible()) w.webContents.send(CH.level, db);
+    }
+  });
+  store.on('segment', (seg) => sendLive({ type: 'append', segment: seg }));
+  store.on('changed', () => { historyRevision++; broadcast(); });
+  models.on('change', () => broadcast());
+  nativeTheme.on('updated', () => broadcast());
+  screen.on('display-added', () => broadcast());
+  screen.on('display-removed', () => broadcast());
 
-  settings.on('change', (n: typeof s, keys: string[]) => {
-    if (keys.includes('fontSize') || keys.includes('opacity') || keys.includes('maxLines')) overlay.setAppearance({ fontSize: n.fontSize, opacity: n.opacity, maxLines: n.maxLines });
-    if (keys.includes('maxLines')) captions.setLayout({ maxLines: n.maxLines });
-    if (keys.includes('contentProtection')) overlay.setContentProtection(n.contentProtection);
-    if (!keys.every((k) => k === 'boundsByDisplay')) rebuildMenu();
+  settings.on('change', (n: Settings, keys: (keyof Settings)[]) => {
+    const has = (...k: (keyof Settings)[]) => k.some((x) => keys.includes(x));
+    if (has('language')) { buildAppMenu(); overlay.editHint = t('overlay.editHint'); lastTrayState = ''; }
+    if (has('captionPreset', 'captionFont', 'fontSize', 'opacity', 'maxLines', 'language')) overlay.relayout();
+    if (has('maxLines')) captions.setLayout({ maxLines: n.maxLines });
+    if (has('captionPosition', 'captionDisplay')) { overlay.relayout({ resetPlacement: true }); if (overlay.visible) overlay.show(); }
+    if (has('contentProtection')) overlay.setContentProtection(n.contentProtection);
+    if (has('dockAlways')) { windows.dockAlways = n.dockAlways; windows.updateDock(); }
+    if (has('launchAtLogin') && app.isPackaged) app.setLoginItemSettings({ openAtLogin: n.launchAtLogin });
+    if (has('shortcutToggle', 'shortcutOverlay', 'shortcutEdit')) registerShortcuts();
+    if (has('historyEnabled') && !snapshot().running) store.persist = n.historyEnabled;
+    if (has('retentionDays')) store.applyRetention(n.retentionDays);
+    if (has('model')) void captions.setModel(n.model);
+    if (!keys.every((k) => k === 'boundsByDisplay')) broadcast();
   });
 
-  tray = new Tray(nativeImage.createEmpty());
-  rebuildMenu();
-  globalShortcut.register(SHORTCUT_TOGGLE, () => void toggleCaptions());
-  globalShortcut.register(SHORTCUT_EDIT, () => setEditMode(!overlay.isEditMode));
+  // First paint uses the right theme: the preload asks synchronously once.
+  ipcMain.on(CH.themeSync, (e) => { e.returnValue = nativeTheme.shouldUseDarkColors; });
+  // IPC: one validated entry point for every app-surface request
+  ipcMain.handle(CH.request, async (e, name: unknown, payload: unknown) => {
+    if (typeof name !== 'string' || !Object.prototype.hasOwnProperty.call(Requests, name)) throw new Error('unknown request');
+    const p = Requests[name as RequestName].safeParse(payload);
+    if (!p.success) throw new Error(`invalid payload for ${name}`);
+    const win = BrowserWindow.fromWebContents(e.sender) ?? undefined;
+    if (!win || !windows.subscribers.includes(win)) throw new Error('unknown sender');
+    return handleRequest(win, name as RequestName, p.data);
+  });
+  windows.on('opened', (name: string, w: BrowserWindow) => {
+    w.webContents.on('did-finish-load', () => { w.webContents.send(CH.state, snapshot()); });
+    if (name === 'panel') w.on('show', () => { w.webContents.send(CH.command, { type: 'panel-shown' }); w.webContents.send(CH.state, snapshot()); w.webContents.send(CH.live, liveReset()); schedulePermissionPoll(); });
+    else schedulePermissionPoll();
+  });
 
-  if (s.overlayVisible) overlay.show();
+  buildAppMenu();
+  loadTrayIcons();
+  tray = new Tray(trayIcons.idle);
+  tray.on('click', () => windows.togglePanel(tray!.getBounds()));
+  tray.on('right-click', () => windows.togglePanel(tray!.getBounds()));
+  windows.createPanel();
+  registerShortcuts();
+  updateTray(status());
+
+  if (settings.get().overlayVisible) overlay.show();
+  if (!settings.get().onboardingDone && !E2E.autostart) windows.open('onboarding');
+
   if (E2E.metricsFile) {
     setInterval(() => {
       const st = captions.providerStats;
-      void metrics.sample(captions.pids, {
-        state: captions.state.state,
-        inferences: st?.inferences ?? 0,
-        skippedBusy: st?.skippedBusy ?? 0,
-        inferP50: st ? percentile(st.inferMs, 50) : null,
-      });
+      void metrics.sample(captions.pids, { state: captions.state.state, inferences: st?.inferences ?? 0, skippedBusy: st?.skippedBusy ?? 0, inferP50: st ? percentile(st.inferMs, 50) : null });
     }, E2E.metricsIntervalMs);
+  }
+  if (E2E.enabled) {
+    // Test hooks for Playwright (main-process evaluate). They call the same functions as the UI.
+    (globalThis as Record<string, unknown>).__earline = {
+      showPanel: () => windows.togglePanel(tray?.getBounds() ?? null),
+      openWindow: (n: 'main' | 'settings' | 'onboarding', tab?: string) => windows.open(n, tab ? { tab } : {}),
+      setTheme: (src: 'light' | 'dark' | 'system') => { nativeTheme.themeSource = src; },
+      windowIds: () => Object.fromEntries([...windows.wins.entries()].map(([k, w]) => [k, w.getMediaSourceId()])),
+      overlayId: () => overlay.win?.getMediaSourceId() ?? null,
+      state: () => snapshot(),
+      pids: () => captions.pids,
+      langName: (l: Lang) => LANG_NAMES[l],
+    };
   }
   if (E2E.autostart) void toggleCaptions();
 });
-
-app.on('window-all-closed', () => { /* tray app: keep running */ });
-

@@ -25,6 +25,9 @@ const api: OverlayApi = {
   ready() {
     ipcRenderer.send(IPC.ready);
   },
+  exitEdit() {
+    ipcRenderer.send(IPC.exitEdit);
+  },
   resize(width, height) {
     const p = ResizeSchema.safeParse({ width: Math.round(width), height: Math.round(height) });
     if (p.success) ipcRenderer.send(IPC.resize, p.data);
