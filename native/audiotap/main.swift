@@ -8,7 +8,9 @@
 // Human-readable logs go to stderr.
 //
 // Usage: audiotap [--exclude-pid PID]... [--wav PATH --seconds N]
+//        audiotap --check-permission | --request-permission   (prints authorized|denied|unknown)
 
+import AppKit
 import AudioToolbox
 import CoreAudio
 import Darwin
@@ -245,6 +247,15 @@ while let a = args.next() {
     case "--wav": wavPath = args.next()
     case "--seconds": seconds = Double(args.next() ?? "10") ?? 10
     case "--check-permission": print(audioCapturePermission()); exit(0)
+    case "--request-permission":
+        // Starting a tap makes macOS show the "System Audio Recording" prompt for the
+        // responsible app. Keep it running briefly, then report the resulting state.
+        let probe = TapSession(excludePids: [])
+        probe.onAudio = { _, _, _ in }
+        do { try probe.start() } catch { log("request: \(error.localizedDescription)") }
+        Thread.sleep(forTimeInterval: 1.0)
+        probe.stop()
+        print(audioCapturePermission()); exit(0)
     default: log("unknown arg \(a)"); exit(2)
     }
 }
@@ -328,6 +339,48 @@ AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &ou
     startSession()
     status("device-changed", ["outputDevice": session.outputDeviceName])
 }
+
+// Which apps are producing audio right now (for "source app" in the history).
+// Helper processes (e.g. a browser's audio service) are mapped to their parent app.
+func appName(forPid pid: pid_t) -> String? {
+    var p = pid
+    for _ in 0..<6 {
+        if let app = NSRunningApplication(processIdentifier: p), app.activationPolicy == .regular, let name = app.localizedName { return name }
+        var info = kinfo_proc(); var size = MemoryLayout<kinfo_proc>.size
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, p]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else { return nil }
+        let parent = info.kp_eproc.e_ppid
+        if parent <= 1 || parent == p { return nil }
+        p = parent
+    }
+    return nil
+}
+
+func currentAudioSources() -> [String] {
+    var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyProcessObjectList, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+    var size: UInt32 = 0
+    guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size) == noErr, size > 0 else { return [] }
+    var ids = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
+    guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &ids) == noErr else { return [] }
+    var names = Set<String>()
+    let me = getpid(), parent = getppid()
+    for obj in ids {
+        guard getProp(obj, kAudioProcessPropertyIsRunningOutput, UInt32(0)).1 != 0 else { continue }
+        let pid = getProp(obj, kAudioProcessPropertyPID, pid_t(0)).1
+        if pid <= 0 || pid == me || pid == parent { continue }
+        if let n = appName(forPid: pid) { names.insert(n) }
+    }
+    return names.sorted()
+}
+
+var lastSources: [String] = []
+let sourcesTimer = DispatchSource.makeTimerSource(queue: .main)
+sourcesTimer.schedule(deadline: .now() + 1, repeating: 3)
+sourcesTimer.setEventHandler {
+    let s = currentAudioSources()
+    if s != lastSources { lastSources = s; out.json(.status, ["event": "sources", "apps": s]) }
+}
+if wavPath == nil { sourcesTimer.resume() }
 
 var _signalSources: [DispatchSourceSignal] = []
 // Exit when the parent goes away (stdin closes) or on signals.

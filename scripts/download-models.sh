@@ -4,7 +4,9 @@
 # Usage: scripts/download-models.sh [base.en|small.en|base.en-q5_1|small.en-q5_1|small.en-tdrz|all]...
 #        (default: base.en + VAD)
 set -euo pipefail
-DEST="${LC_MODELS_DIR:-$HOME/Library/Application Support/Live Captions/models}"
+APP_DIR="$HOME/Library/Application Support/Earline"
+[ -d "$APP_DIR" ] || [ ! -d "$HOME/Library/Application Support/Live Captions" ] || APP_DIR="$HOME/Library/Application Support/Live Captions" # pre-rename install
+DEST="${LC_MODELS_DIR:-$APP_DIR/models}"
 WHISPER_REV="5359861c739e955e79d9a303bcbc70fb988958b1" # ggerganov/whisper.cpp
 VAD_REV="9ffd54a1e1ee413ddf265af9913beaf518d1639b"     # ggml-org/whisper-vad
 TDRZ_REV="d44ba793fc67e509623a88a409723311fa677744" # akashmjn/tinydiarize-whisper.cpp

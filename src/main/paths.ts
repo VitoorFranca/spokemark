@@ -1,8 +1,23 @@
-import { existsSync } from 'node:fs';
+import { existsSync, renameSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { APP_NAME, LEGACY_DATA_DIR_NAME } from '../shared/brand';
 
-export const APP_NAME = 'Live Captions';
+export { APP_NAME };
+
+export function dataDir(): string {
+  return process.env.LC_DATA_DIR ?? path.join(homedir(), 'Library', 'Application Support', APP_NAME);
+}
+
+/** One-time move of the MVP data folder (models, settings) to the new product name. */
+export function migrateLegacyDataDir(): boolean {
+  if (process.env.LC_DATA_DIR) return false;
+  const legacy = path.join(homedir(), 'Library', 'Application Support', LEGACY_DATA_DIR_NAME);
+  const target = dataDir();
+  if (legacy === target || existsSync(target) || !existsSync(legacy)) return false;
+  renameSync(legacy, target); // same volume: instant, models are not copied
+  return true;
+}
 
 export const MODELS = {
   'base.en': 'ggml-base.en.bin',
@@ -15,7 +30,7 @@ export type ModelId = keyof typeof MODELS;
 export const VAD_MODEL_FILE = 'ggml-silero-v6.2.0.bin';
 
 export function modelsDir(): string {
-  return process.env.LC_MODELS_DIR ?? path.join(homedir(), 'Library', 'Application Support', APP_NAME, 'models');
+  return process.env.LC_MODELS_DIR ?? path.join(dataDir(), 'models');
 }
 
 export function modelPath(id: ModelId): string {

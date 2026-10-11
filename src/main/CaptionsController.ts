@@ -17,6 +17,7 @@ export type Indicator = 'idle' | 'starting' | 'capturing' | 'processing' | 'sile
  * buffer while an inference runs.
  *
  * Events: 'view'(SubtitleView, newWords) 'indicator'(Indicator, text) 'update'(TranscriptUpdate) 'log'(line)
+ *         'level'(dBFS) ~15 Hz while capturing, 'sources'(app names producing audio), 'session'(started|ended)
  */
 export class CaptionsController extends EventEmitter {
   readonly state = new AppStateMachine();
@@ -28,6 +29,10 @@ export class CaptionsController extends EventEmitter {
   indicator: Indicator = 'idle';
   indicatorText = '';
   private silent = false;
+  private levelAcc = 0;
+  private levelN = 0;
+  private levelLast = 0;
+  sources: string[] = [];
 
   constructor(model: ModelId, opts: { maxLines: number; maxCharsPerLine: number }) {
     super();
@@ -90,7 +95,7 @@ export class CaptionsController extends EventEmitter {
     provider.on('log', (l: string) => this.emit('log', l));
     provider.on('error', (m: string) => this.emit('log', `[whisper] error: ${m}`));
     provider.on('fatal', (m: string) => void this.fail(`Transcription failed: ${m}`));
-    pipeline.on('samples', (s: Float32Array, i: number) => provider.pushAudio(s, i));
+    pipeline.on('samples', (s: Float32Array, i: number) => { provider.pushAudio(s, i); this.meter(s); });
     capture.on('format', (f: CaptureFormat) => { pipeline.setFormat(f.sampleRate, f.channels); this.emit('log', `[capture] format ${JSON.stringify(f)}`); });
     capture.on('audio', (x: Float32Array, ns: bigint) => { if (this.pipeline === pipeline) pipeline.push(x, ns); });
     capture.on('log', (l: string) => this.emit('log', l));
@@ -102,6 +107,7 @@ export class CaptionsController extends EventEmitter {
       if (this.state.state !== 'starting') return; // stopped while loading
       capture.start();
       this.state.to('capturing');
+      this.emit('session', 'started');
       this.emit('log', `[captions] started (model ${this.model}, metal=${provider.metalInitialized})`);
     } catch (e) {
       await this.fail((e as Error).message);
@@ -110,6 +116,7 @@ export class CaptionsController extends EventEmitter {
 
   private onCaptureStatus(s: CaptureStatus): void {
     if (s.event === 'level') return;
+    if (s.event === 'sources') { this.sources = s.apps; this.emit('sources', s.apps); return; }
     this.emit('log', `[capture] ${JSON.stringify(s)}`);
     if (s.event === 'silent-since-start' && s.permission !== 'authorized') {
       // The tap delivers digital silence when the TCC permission is missing.
@@ -135,7 +142,21 @@ export class CaptionsController extends EventEmitter {
     this.state.to('idle');
   }
 
+  /** RMS level for the UI meter (cheap: one pass over samples already in memory). */
+  private meter(x: Float32Array): void {
+    for (let i = 0; i < x.length; i++) this.levelAcc += x[i]! * x[i]!;
+    this.levelN += x.length;
+    const now = Date.now();
+    if (now - this.levelLast < 66 || this.levelN === 0) return;
+    const rms = Math.sqrt(this.levelAcc / this.levelN);
+    this.levelAcc = 0; this.levelN = 0; this.levelLast = now;
+    this.emit('level', rms > 0 ? Math.max(-90, 20 * Math.log10(rms)) : -90);
+  }
+
   private async teardown(): Promise<void> {
+    const wasRunning = this.capture !== null;
+    if (wasRunning) this.emit('session', 'ended');
+    this.sources = [];
     const c = this.capture, p = this.provider;
     this.capture = null;
     this.provider = null;

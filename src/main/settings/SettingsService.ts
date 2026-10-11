@@ -1,38 +1,38 @@
 import { EventEmitter } from 'node:events';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { z } from 'zod';
+import { SettingsSchema, type Settings } from '../../shared/settings';
 
-const BoundsSchema = z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() });
-
-export const SettingsSchema = z.object({
-  model: z.enum(['base.en', 'base.en-q5_1', 'small.en', 'small.en-q5_1', 'small.en-tdrz']).default('base.en'),
-  fontSize: z.number().min(12).max(72).default(28),
-  opacity: z.number().min(0.1).max(1).default(0.6),
-  maxLines: z.number().int().min(1).max(5).default(2),
-  overlayVisible: z.boolean().default(true),
-  contentProtection: z.boolean().default(false),
-  /** Overlay bounds per display id (remembered per monitor). */
-  boundsByDisplay: z.record(z.string(), BoundsSchema).default({}),
-});
-export type Settings = z.infer<typeof SettingsSchema>;
+export { SettingsSchema, type Settings };
 
 /** JSON settings in userData, validated on load. Events: 'change'(settings, keys) */
 export class SettingsService extends EventEmitter {
   private data: Settings;
   private saveTimer: NodeJS.Timeout | null = null;
+  readonly firstRun: boolean;
 
   constructor(private readonly file: string) {
     super();
-    this.data = this.load();
+    const loaded = this.load();
+    this.firstRun = loaded === null;
+    this.data = loaded ?? SettingsSchema.parse({});
   }
 
-  private load(): Settings {
+  private load(): Settings | null {
     try {
-      const parsed = SettingsSchema.safeParse(JSON.parse(readFileSync(this.file, 'utf8')));
+      const raw = JSON.parse(readFileSync(this.file, 'utf8')) as Record<string, unknown>;
+      const parsed = SettingsSchema.safeParse(raw);
       if (parsed.success) return parsed.data;
-    } catch { /* first run or corrupt file */ }
-    return SettingsSchema.parse({});
+      // Keep whatever is still valid (e.g. after a schema change) instead of resetting everything.
+      const partial: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(raw)) {
+        const one = SettingsSchema.safeParse({ [k]: v });
+        if (one.success) partial[k] = v;
+      }
+      return SettingsSchema.parse(partial);
+    } catch {
+      return null; // first run (or unreadable file)
+    }
   }
 
   get(): Readonly<Settings> {
@@ -41,8 +41,10 @@ export class SettingsService extends EventEmitter {
 
   update(patch: Partial<Settings>): void {
     const next = SettingsSchema.parse({ ...this.data, ...patch });
+    const keys = (Object.keys(patch) as (keyof Settings)[]).filter((k) => JSON.stringify(this.data[k]) !== JSON.stringify(next[k]));
     this.data = next;
-    this.emit('change', next, Object.keys(patch));
+    if (keys.length === 0) return;
+    this.emit('change', next, keys);
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => this.flush(), 300);
   }
