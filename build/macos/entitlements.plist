@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Required by Electron/V8 when the hardened runtime is enabled (e.g. for notarization).
+       The local ad-hoc build is signed WITHOUT the hardened runtime, where these are not enforced.
+       No entitlement exists or is needed for CoreAudio Process Taps: access is gated by the
+       TCC "System Audio Recording" permission + NSAudioCaptureUsageDescription in Info.plist. -->
+  <key>com.apple.security.cs.allow-jit</key><true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+</dict>
+</plist>
