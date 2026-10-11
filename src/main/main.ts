@@ -450,7 +450,7 @@ app.whenReady().then(async () => {
   tray = new Tray(trayIcons.idle);
   tray.on('click', () => windows.togglePanel(tray!.getBounds()));
   tray.on('right-click', () => windows.togglePanel(tray!.getBounds()));
-  windows.createPanel();
+  tray.on('mouse-enter', () => windows.warmPanel());
   registerShortcuts();
   updateTray(status());
 
@@ -467,6 +467,7 @@ app.whenReady().then(async () => {
     // Test hooks for Playwright (main-process evaluate). They call the same functions as the UI.
     (globalThis as Record<string, unknown>).__earline = {
       showPanel: () => windows.togglePanel(tray?.getBounds() ?? null),
+      warmPanel: () => windows.warmPanel(),
       openWindow: (n: 'main' | 'settings' | 'onboarding', tab?: string) => windows.open(n, tab ? { tab } : {}),
       setTheme: (src: 'light' | 'dark' | 'system') => { nativeTheme.themeSource = src; },
       windowIds: () => Object.fromEntries([...windows.wins.entries()].map(([k, w]) => [k, w.getMediaSourceId()])),

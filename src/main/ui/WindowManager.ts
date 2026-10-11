@@ -9,9 +9,8 @@ const PANEL_W = 360;
 const PANEL_H = 520;
 
 /**
- * Creates the app windows. The panel is created once and kept hidden so it
- * opens instantly; every other window is created on demand and destroyed when
- * closed (no hidden windows holding memory). Dock icon only while the main
+ * Creates the app windows on demand and destroys them when closed (no hidden
+ * windows holding memory). The panel is warmed on hover (see warmPanel). Dock icon only while the main
  * window is open, unless "always show in Dock" is on.
  *
  * Events: 'opened'(name, win) 'closed'(name)
@@ -19,6 +18,7 @@ const PANEL_H = 520;
 export class WindowManager extends EventEmitter {
   readonly wins = new Map<SurfaceName, BrowserWindow>();
   dockAlways = false;
+  private panelLoading = new WeakSet<BrowserWindow>();
   panelShownAt = 0;
 
   constructor(private readonly devUrl: string | null) {
@@ -87,19 +87,39 @@ export class WindowManager extends EventEmitter {
     }));
     win.setAlwaysOnTop(true, 'pop-up-menu');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-    win.on('blur', () => { if (!win.webContents.isDevToolsOpened()) win.hide(); });
+    win.on('blur', () => { if (!win.webContents.isDevToolsOpened() && win.isVisible()) this.hidePanel(); });
+    this.panelLoading.add(win);
+    win.webContents.once('did-finish-load', () => this.panelLoading.delete(win));
     this.load(win, 'panel');
     return this.track('panel', win);
   }
 
+  private releaseTimer: NodeJS.Timeout | null = null;
+
+  /**
+   * Panel lifecycle: a renderer costs ~100 MB, so the panel is not kept alive.
+   * It is pre-created ("warmed") when the pointer enters the menu bar icon, so
+   * it is ready by the time of the click, and destroyed 60 s after closing.
+   */
+  warmPanel(): void {
+    this.cancelRelease();
+    if (!this.get('panel')) this.createPanel();
+  }
+
+  private cancelRelease(): void {
+    if (this.releaseTimer) { clearTimeout(this.releaseTimer); this.releaseTimer = null; }
+  }
+
   togglePanel(anchor: Rectangle | null): void {
-    const win = this.get('panel') ?? this.createPanel();
-    if (win.isVisible()) { win.hide(); return; }
+    const existing = this.get('panel');
+    if (existing?.isVisible()) { this.hidePanel(); return; }
+    this.cancelRelease();
     this.panelShownAt = performance.now();
-    const b = this.panelBounds(anchor);
-    win.setBounds(b);
-    win.show();
-    win.focus();
+    const win = existing ?? this.createPanel();
+    win.setBounds(this.panelBounds(anchor));
+    const reveal = () => { win.show(); win.focus(); };
+    if (existing && !this.panelLoading.has(win)) reveal();
+    else win.webContents.once('did-finish-load', reveal);
   }
 
   private panelBounds(anchor: Rectangle | null): Rectangle {
@@ -111,7 +131,11 @@ export class WindowManager extends EventEmitter {
   }
 
   hidePanel(): void {
-    this.get('panel')?.hide();
+    const w = this.get('panel');
+    if (!w) return;
+    w.hide();
+    this.cancelRelease();
+    this.releaseTimer = setTimeout(() => { this.releaseTimer = null; const p = this.get('panel'); if (p && !p.isVisible()) p.close(); }, 60_000);
   }
 
   // ---- regular windows ------------------------------------------------------
