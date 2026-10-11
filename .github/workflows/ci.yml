@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-15 # Apple Silicon: matches the only supported architecture
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Cache whisper.cpp build
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor/whisper.cpp
+            build/whisper-worker
+          key: whisper-${{ runner.os }}-${{ hashFiles('scripts/build-native.sh', 'native/whisper-worker/**') }}
+      - name: Build native helpers
+        run: npm run build:native
+        env:
+          GGML_NATIVE: 'OFF'
+      - run: npm run build

@@ -2,7 +2,7 @@
 
 Legendas em tempo real, no idioma original (inglês), para qualquer áudio que o Mac estiver tocando: Meet, Zoom, Discord, YouTube e outros. Funciona 100% local com whisper.cpp + Metal e captura o áudio por CoreAudio Process Tap, sem driver virtual e sem trocar o dispositivo de saída.
 
-Requisitos: Apple Silicon e macOS 14.4 ou mais recente. Testado no macOS 26.6.2 com M4.
+Requisitos: Apple Silicon e macOS 14.2 ou mais recente (mínimo do CoreAudio Process Tap). Testado no macOS 26.6.2 com M4.
 
 ## Arquitetura
 
@@ -72,3 +72,24 @@ Veja a resposta final da sessão. As métricas brutas ficam em `docs/RESULTS.md`
 3. **Permissão negada → concedida:** em Ajustes, desligue o Spokemark na lista "Somente Gravação de Áudio do Sistema" e clique em Start. Deve aparecer "CC ⚠︎" com a mensagem de permissão. Religue, clique em Stop e Start, e a captura deve voltar.
 4. **Tela cheia / Spaces:** coloque um vídeo em tela cheia (⌃⌘F) e confira se o overlay aparece por cima e em todos os Spaces.
 5. **Múltiplos monitores:** com o cursor no monitor 2, faça Hide/Show Overlay. O overlay deve abrir no monitor 2. Mova no modo de edição, trave e reabra: a posição deve ser lembrada por monitor.
+
+## Release
+
+O pipeline fica em `.github/workflows/release.yml`.
+
+- **Publicar uma versão:** `git tag v0.2.0 && git push origin v0.2.0`. O CI faz o build nativo portável (`GGML_NATIVE=OFF`, macOS 14.2+), roda typecheck e testes, empacota e publica um GitHub Release com `Spokemark-<versão>-macos-arm64.dmg`, `.zip` e `SHA256SUMS.txt`. Tags com hífen (ex.: `v0.2.0-beta.1`) saem como *prerelease*.
+- **Testar sem publicar:** use Actions → Release → *Run workflow*. Ele gera os mesmos artefatos como *artifact* do job.
+- **Assinatura:** sem *secrets*, o build sai com assinatura ad hoc. O usuário precisa abrir com clique direito → Abrir ou permitir em Ajustes → Privacidade e Segurança. Para assinar com Developer ID e notarizar, configure estes *secrets* no repositório:
+
+| Secret | Conteúdo |
+|---|---|
+| `APPLE_CERT_P12_BASE64` | Certificado "Developer ID Application" exportado em .p12, em base64 |
+| `APPLE_CERT_PASSWORD` | Senha do .p12 |
+| `APPLE_SIGN_IDENTITY` | Ex.: `Developer ID Application: Nome (TEAMID)` |
+| `APPLE_ID`, `APPLE_APP_PASSWORD`, `APPLE_TEAM_ID` | Conta Apple e *app-specific password* para o `notarytool` |
+
+- **Localmente:** `GGML_NATIVE=OFF npm run build:native && npm run package && scripts/make-dist.sh`
+
+## Licença
+
+[MIT](LICENSE). Os componentes de terceiros também são MIT ou ISC: whisper.cpp, modelos Whisper, tinydiarize, Silero VAD, Electron, React e Lucide.

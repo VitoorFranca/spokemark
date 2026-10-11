@@ -1,0 +1,110 @@
+name: Release
+
+# Push a tag like v0.2.0 to publish a GitHub Release with the .dmg/.zip.
+# "Run workflow" (manual) builds the same artifacts without publishing (dry run).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for the dry-run artifacts (no release is published)'
+        required: false
+        default: '0.0.0-dev'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Set version
+        id: version
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then V="${GITHUB_REF_NAME#v}"; else V="${{ inputs.version }}"; fi
+          npm version "$V" --no-git-tag-version --allow-same-version
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Build native helpers (portable)
+        run: npm run build:native
+        env:
+          GGML_NATIVE: 'OFF'
+          MACOS_MIN: '14.2'
+
+      # Optional Developer ID signing + notarization. Without these secrets the
+      # app is signed ad hoc (community build; users must allow it in Privacy & Security).
+      - name: Import signing certificate
+        id: signing
+        env:
+          CERT_P12: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          SIGN_IDENTITY: ${{ secrets.APPLE_SIGN_IDENTITY }}
+        run: |
+          if [ -z "$CERT_P12" ] || [ -z "$SIGN_IDENTITY" ]; then echo "mode=adhoc" >> "$GITHUB_OUTPUT"; exit 0; fi
+          KC="$RUNNER_TEMP/signing.keychain-db"; KP="$(uuidgen)"
+          security create-keychain -p "$KP" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KP" "$KC"
+          echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KP" "$KC"
+          security list-keychains -d user -s "$KC" "$HOME/Library/Keychains/login.keychain-db"
+          rm "$RUNNER_TEMP/cert.p12"
+          echo "mode=developer-id" >> "$GITHUB_OUTPUT"
+
+      - name: Package app
+        run: npm run package
+        env:
+          SIGN_IDENTITY: ${{ steps.signing.outputs.mode == 'developer-id' && secrets.APPLE_SIGN_IDENTITY || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Build .dmg / .zip
+        run: scripts/make-dist.sh
+        env:
+          SIGN_IDENTITY: ${{ steps.signing.outputs.mode == 'developer-id' && secrets.APPLE_SIGN_IDENTITY || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spokemark-${{ steps.version.outputs.version }}-macos-arm64
+          path: dist-release/*
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.signing.outputs.mode }}
+        run: |
+          {
+            echo "Spokemark ${GITHUB_REF_NAME} for macOS 14.2+ on Apple Silicon."
+            echo
+            echo "Speech models are downloaded on first launch (checksum-verified) and everything runs on your Mac."
+            if [ "$MODE" = "adhoc" ]; then
+              echo
+              echo "**This build is not notarized.** After moving Spokemark to Applications, open it once with right-click → Open,"
+              echo "or allow it in System Settings → Privacy & Security."
+            fi
+            echo
+            echo "Verify the download: \`shasum -a 256 -c SHA256SUMS.txt\`"
+          } > "$RUNNER_TEMP/notes.md"
+          EXTRA=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then EXTRA+=(--prerelease); fi # v1.0.0-beta.1 -> prerelease
+          gh release create "$GITHUB_REF_NAME" dist-release/* \
+            --title "Spokemark ${GITHUB_REF_NAME}" --notes-file "$RUNNER_TEMP/notes.md" --generate-notes "${EXTRA[@]}"

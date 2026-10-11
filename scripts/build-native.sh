@@ -7,6 +7,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WHISPER_TAG="v1.9.5"
 WHISPER_DIR="$ROOT/vendor/whisper.cpp"
 OUT="$ROOT/build/bin"
+# Distribution builds: MACOS_MIN keeps binaries runnable on older macOS (Process Tap needs 14.2+),
+# GGML_NATIVE=OFF avoids CPU-specific instructions of the build machine (CI sets it).
+MACOS_MIN="${MACOS_MIN:-14.2}"
+GGML_NATIVE="${GGML_NATIVE:-ON}"
 mkdir -p "$OUT" "$ROOT/vendor"
 
 if [ ! -d "$WHISPER_DIR/.git" ]; then
@@ -14,11 +18,12 @@ if [ ! -d "$WHISPER_DIR/.git" ]; then
 fi
 
 echo "==> audiotap"
-swiftc -O "$ROOT/native/audiotap/main.swift" -o "$OUT/audiotap"
+swiftc -O -target "arm64-apple-macos$MACOS_MIN" "$ROOT/native/audiotap/main.swift" -o "$OUT/audiotap"
 
 echo "==> whisper-worker (whisper.cpp $WHISPER_TAG, Metal)"
 cmake -S "$ROOT/native/whisper-worker" -B "$ROOT/build/whisper-worker" \
-  -DCMAKE_BUILD_TYPE=Release -DWHISPER_DIR="$WHISPER_DIR" >/dev/null
+  -DCMAKE_BUILD_TYPE=Release -DWHISPER_DIR="$WHISPER_DIR" \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOS_MIN" -DCMAKE_OSX_ARCHITECTURES=arm64 -DGGML_NATIVE="$GGML_NATIVE" >/dev/null
 cmake --build "$ROOT/build/whisper-worker" --config Release -j "$(sysctl -n hw.ncpu)" --target whisper-worker
 cp "$ROOT/build/whisper-worker/whisper-worker" "$OUT/whisper-worker"
 echo "==> done: $(ls "$OUT")"

@@ -1,9 +1,9 @@
 {
-  "name": "live-captions",
+  "name": "spokemark",
   "productName": "Spokemark",
   "version": "0.1.0",
   "private": true,
-  "description": "Spokemark \u2014 live captions for anything your Mac plays (CoreAudio Process Tap + whisper.cpp/Metal)",
+  "description": "Spokemark — live captions for anything your Mac plays (CoreAudio Process Tap + whisper.cpp/Metal)",
   "main": "dist/main/main.js",
   "type": "commonjs",
   "scripts": {
@@ -37,5 +37,10 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "4.6.5"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VitoorFranca/spokemark.git"
   }
 }
