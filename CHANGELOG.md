@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-11
+
+First public release. Unsigned (ad-hoc) build for Apple Silicon, macOS 14.2+.
+
 ### Added
 - Real-time captions for any audio the Mac plays (CoreAudio Process Tap), recognized on-device with whisper.cpp on Metal, gated by Silero VAD.
 - Always-on-top caption overlay (click-through, edit mode, presets, per-display position).
@@ -15,3 +19,6 @@ All notable changes to this project are documented here. The format is based on
 - Experimental speaker-change marks (tinydiarize model).
 - English and Portuguese (Brazil) interface.
 - Release workflow producing `.dmg`/`.zip` and SHA-256 checksums.
+
+[Unreleased]: https://github.com/VitoorFranca/spokemark/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/VitoorFranca/spokemark/releases/tag/v0.1.0
