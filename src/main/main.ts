@@ -455,7 +455,7 @@ app.whenReady().then(async () => {
   updateTray(status());
 
   if (settings.get().overlayVisible) overlay.show();
-  if (!settings.get().onboardingDone && !E2E.autostart) windows.open('onboarding');
+  if (!settings.get().onboardingDone && !E2E.autostart && process.env.LC_SKIP_ONBOARDING !== '1') windows.open('onboarding');
 
   if (E2E.metricsFile) {
     setInterval(() => {
@@ -473,6 +473,8 @@ app.whenReady().then(async () => {
       overlayId: () => overlay.win?.getMediaSourceId() ?? null,
       state: () => snapshot(),
       pids: () => captions.pids,
+      toggleCaptions: () => toggleCaptions(),
+      setOverlayEdit: (on: boolean) => setEditMode(on),
       langName: (l: Lang) => LANG_NAMES[l],
     };
   }

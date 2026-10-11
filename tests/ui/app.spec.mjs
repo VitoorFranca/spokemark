@@ -1,0 +1,81 @@
+import { expect, test } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { launch, ROOT, sleep } from './helpers.mjs';
+
+const helperCount = () => {
+  try { return execFileSync('/bin/sh', ['-c', "ps -A -o command= | grep -cE 'bin/(audiotap|whisper-worker)( |$)' || true"]).toString().trim(); } catch { return '0'; }
+};
+
+test('onboarding completes when permission is already granted', async () => {
+  const { app, page, dataDir } = await launch();
+  const p = await page('onboarding'); // first run opens onboarding
+  const next = p.getByRole('button', { name: /Continuar|Continue/ });
+  await next.click();
+  await expect(p.getByText(/Permissão concedida|Permission granted/)).toBeVisible({ timeout: 10_000 }); // detected, no prompt
+  await next.click();
+  await expect(p.getByText(/Modelo pronto|Model ready/)).toBeVisible(); // already downloaded -> step satisfied
+  await next.click();
+  await expect(p.getByRole('heading', { name: /Teste|Try it/ })).toBeVisible();
+  await p.getByRole('button', { name: /Pular teste|Skip test/ }).click();
+  await expect.poll(() => { try { return JSON.parse(readFileSync(path.join(dataDir, 'settings.json'), 'utf8')).onboardingDone; } catch { return null; } }, { timeout: 5000 }).toBe(true);
+  await app.close();
+  await expect.poll(helperCount).toBe('0');
+});
+
+test('start and stop from the menu bar panel', async () => {
+  const { app, hook, page } = await launch({ LC_SKIP_ONBOARDING: '1' });
+  await hook('showPanel');
+  const p = await page('panel');
+  await p.getByRole('button', { name: /Iniciar legendas|Start Captions/ }).click();
+  await expect(p.getByText(/^(Ouvindo|Listening)/)).toBeVisible({ timeout: 30_000 });
+  expect((await hook('pids')).length).toBe(2); // audiotap + whisper-worker
+  await p.getByRole('button', { name: /Parar legendas|Stop Captions/ }).click();
+  await expect(p.getByText(/^(Pausado|Paused)$/)).toBeVisible({ timeout: 10_000 });
+  expect(await hook('pids')).toEqual([]);
+  await app.close();
+  await expect.poll(helperCount).toBe('0');
+});
+
+test('choosing a preset in Settings restyles the overlay', async () => {
+  const { app, hook, page } = await launch({ LC_SKIP_ONBOARDING: '1' });
+  await hook('openWindow', 'settings', 'captions');
+  const s = await page('settings');
+  const overlay = await page('overlay');
+  await s.getByRole('radio', { name: /Alto contraste|High contrast/ }).click();
+  // the overlay's caption text uses the preset's weight and the new size
+  await overlay.evaluate(() => window.captions); // loaded
+  await hook('setOverlayEdit', true); // makes the box visible
+  await expect.poll(() => overlay.evaluate(() => {
+    const el = [...document.querySelectorAll('div')].find((d) => d.style.fontWeight);
+    return el ? `${el.style.fontWeight}|${el.style.fontSize}` : '';
+  })).toBe('700|32px');
+  await s.getByRole('radio', { name: /Cinema/ }).click();
+  await expect.poll(() => overlay.evaluate(() => [...document.querySelectorAll('div')].find((d) => d.style.fontWeight)?.style.fontWeight)).toBe('600');
+  await app.close();
+});
+
+test('history: real capture, full-text search and export', async () => {
+  test.skip(process.env.E2E_AUDIO !== '1', 'plays audio through the speakers: run with E2E_AUDIO=1');
+  const exportDir = path.join(ROOT, 'build', 'e2e-export');
+  const { app, hook, page } = await launch({ LC_SKIP_ONBOARDING: '1', LC_E2E_EXPORT_DIR: exportDir });
+  await hook('showPanel');
+  const panel = await page('panel');
+  await panel.getByRole('button', { name: /Iniciar legendas|Start Captions/ }).click();
+  await expect(panel.getByText(/^(Ouvindo|Listening)/)).toBeVisible({ timeout: 30_000 });
+  execFileSync('afplay', [path.join(ROOT, 'tests/e2e/fixtures/jfk.wav')]); // real system audio
+  await sleep(3000);
+  await hook('toggleCaptions');
+  await hook('openWindow', 'main');
+  const main = await page('main');
+  await main.getByRole('tab', { name: /Histórico|History/ }).click();
+  await main.getByRole('searchbox').fill('countr');
+  await expect(main.getByRole('option').first()).toContainText(/country/i, { timeout: 10_000 });
+  await main.getByRole('button', { name: /Exportar \.srt|Export \.srt/ }).click();
+  await expect.poll(() => readdirSync(exportDir).filter((f) => f.endsWith('.srt')).length, { timeout: 5000 }).toBeGreaterThan(0);
+  const srt = readFileSync(path.join(exportDir, readdirSync(exportDir).find((f) => f.endsWith('.srt'))), 'utf8');
+  expect(srt).toMatch(/^1\n\d\d:\d\d:\d\d,\d{3} --> \d\d:\d\d:\d\d,\d{3}\n/);
+  expect(srt.toLowerCase()).toContain('country');
+  await app.close();
+});

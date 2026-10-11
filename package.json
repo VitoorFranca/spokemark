@@ -1,9 +1,9 @@
 {
   "name": "live-captions",
-  "productName": "Live Captions",
+  "productName": "Earline",
   "version": "0.1.0",
   "private": true,
-  "description": "Local real-time captions for macOS system audio (whisper.cpp + CoreAudio Process Tap)",
+  "description": "Earline \u2014 live captions for anything your Mac plays (CoreAudio Process Tap + whisper.cpp/Metal)",
   "main": "dist/main/main.js",
   "type": "commonjs",
   "scripts": {
@@ -14,7 +14,8 @@
     "start": "npm run build && electron .",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "package": "npm run build && node scripts/package.mjs"
+    "package": "npm run build && node scripts/package.mjs",
+    "test:ui": "npm run build && playwright test"
   },
   "devDependencies": {
     "@electron/packager": "20.3.0",
