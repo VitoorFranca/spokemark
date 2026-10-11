@@ -1,0 +1,15 @@
+<!doctype html><script>
+    (async () => {
+      try {
+        const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        const a = s.getAudioTracks();
+        console.log('audio tracks: ' + a.length + ' ' + JSON.stringify(a[0]?.getSettings()));
+        const ctx = new AudioContext();
+        const src = ctx.createMediaStreamSource(new MediaStream(a));
+        const an = ctx.createAnalyser(); an.fftSize = 2048; src.connect(an);
+        const buf = new Float32Array(2048); let sum = 0, n = 0;
+        const t0 = performance.now();
+        const iv = setInterval(() => { an.getFloatTimeDomainData(buf); for (const v of buf) { sum += v*v; n++; }
+          if (performance.now() - t0 > 10000) { clearInterval(iv); console.log('RESULT rms=' + Math.sqrt(sum/n) + ' sampleRate=' + ctx.sampleRate); window.close(); } }, 40);
+      } catch (e) { console.log('RESULT error ' + e.name + ': ' + e.message); window.close(); }
+    })();</script>
