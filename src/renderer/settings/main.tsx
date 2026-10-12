@@ -1,10 +1,11 @@
-import { Captions, Check, Cpu, FolderOpen, Info, Keyboard, Lock, Settings2, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { Captions, Check, Cpu, FolderOpen, Info, Keyboard, Languages, Lock, Settings2, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SETTINGS_TABS, type AppStateMsg, type Command } from '../../shared/appIpc';
 import { APP_NAME } from '../../shared/brand';
 import { LANG_NAMES } from '../../shared/i18n';
 import { MODELS } from '../../shared/models';
+import { matchLanguage } from '../../shared/lang';
 import { CAPTION_FONTS, CAPTION_PRESETS, MODEL_IDS, type Settings } from '../../shared/settings';
 import '../shared/base.css';
 import { CaptionBox, type CaptionLine } from '../shared/CaptionBox';
@@ -96,17 +97,45 @@ function usePreviewLines(t: T, replayKey: string): CaptionLine[] {
   return [{ id: 1, committed: l1c, provisional: l1p }, ...(l2all.length ? [{ id: 2, committed: l2c, provisional: l2p }] : [])];
 }
 
-function CaptionsTab({ s, t }: { s: AppStateMsg; t: T }) {
+// Generic "video call" app icon for the preview header (not any real app's icon).
+const PREVIEW_ICON = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#2563EB"/><rect x="8" y="13" width="17" height="14" rx="3" fill="#fff"/><path d="M27 18l6-4v12l-6-4z" fill="#fff"/></svg>');
+
+/** Live preview: the same CaptionBox the overlay renders, with sample text, header, waves and a real translation. */
+function CaptionPreview({ s, t }: { s: AppStateMsg; t: T }) {
   const st = s.settings;
-  const lines = usePreviewLines(t, `${st.captionPreset}|${st.captionFont}|${st.maxLines}`);
+  const lines = usePreviewLines(t, `${st.captionPreset}|${st.captionFont}|${st.maxLines}|${st.translationMode}|${st.captionWaves}`);
+  const level = useRef(-90);
+  const shown = lines.map((l) => l.committed + l.provisional).join('').length;
+  useEffect(() => { level.current = -22; const id = setTimeout(() => { level.current = -90; }, 700); return () => clearTimeout(id); }, [shown]);
+  const [translated, setTranslated] = useState('');
+  const sample = `${t('captions.previewText1')} ${t('captions.previewText2')}`;
+  const canTranslate = st.translationEnabled && s.translation.available === true;
+  useEffect(() => {
+    setTranslated('');
+    if (!canTranslate) return;
+    let alive = true;
+    void api().request('translation.preview', { text: sample, target: st.translationTarget }).then((r) => { if (alive && typeof r === 'string') setTranslated(r); });
+    return () => { alive = false; };
+  }, [canTranslate, st.translationTarget, sample]);
   return (
-    <>
-      <div aria-label={t('captions.preview')} role="img" className="mb-5 overflow-hidden rounded-[12px] border border-[var(--border)]"
-        style={{ background: 'radial-gradient(120% 90% at 30% 20%, #1A3FB8 0%, #0A1F66 45%, #020A2A 100%)' }}>
-        <div className="flex h-[200px] items-end justify-center px-8 pb-5">
-          <div className="w-full max-w-[520px]"><CaptionBox look={{ ...st, fontSize: Math.round(st.fontSize * 0.75) }} lines={lines} /></div>
+    <div aria-label={t('captions.preview')} role="img" className="mb-5 overflow-hidden rounded-[12px] border border-[var(--border)]"
+      style={{ background: 'radial-gradient(120% 90% at 30% 20%, #1A3FB8 0%, #0A1F66 45%, #020A2A 100%)' }}>
+      <div className="flex min-h-[200px] items-end justify-center px-8 py-5">
+        <div className="w-full max-w-[520px]">
+          <CaptionBox look={{ ...st, fontSize: Math.round(st.fontSize * 0.75) }} lines={lines} level={level} waves={st.captionWaves}
+            source={{ name: t('captions.previewApp'), icon: PREVIEW_ICON }} showSourceApp={st.showSourceApp}
+            translationEnabled={canTranslate} translationMode={st.translationMode} translation={translated} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function CaptionsTab({ s, t }: { s: AppStateMsg; t: T }) {
+  const st = s.settings;
+  return (
+    <>
+      <CaptionPreview s={s} t={t} />
       <Section title={t('captions.style')}>
         <ListRow label={t('captions.preset')}>
           <Segmented label={t('captions.preset')} value={st.captionPreset} options={CAPTION_PRESETS.map((p) => ({ value: p, label: t(`preset.${p}`) }))} onChange={(v) => void api().request('settings.applyPreset', v)} />
@@ -116,6 +145,12 @@ function CaptionsTab({ s, t }: { s: AppStateMsg; t: T }) {
         </ListRow>
         <ListRow label={t('captions.size')}><div className="w-[220px]"><Slider label={t('captions.size')} min={18} max={56} value={st.fontSize} onChange={(v) => set({ fontSize: v })} format={(v) => `${v} pt`} /></div></ListRow>
         <ListRow label={t('captions.opacity')}><div className="w-[220px]"><Slider label={t('captions.opacity')} min={0} max={100} step={5} value={Math.round(st.opacity * 100)} onChange={(v) => set({ opacity: v / 100 })} format={(v) => `${v}%`} /></div></ListRow>
+        <ListRow label={t('captions.showSourceApp')} description={t('captions.showSourceAppHint')}>
+          <Toggle label={t('captions.showSourceApp')} checked={st.showSourceApp} onChange={(v) => set({ showSourceApp: v })} />
+        </ListRow>
+        <ListRow label={t('captions.waves')} description={t('captions.wavesHint')}>
+          <Toggle label={t('captions.waves')} checked={st.captionWaves} onChange={(v) => set({ captionWaves: v })} />
+        </ListRow>
         <ListRow label={t('captions.lines')}>
           <Segmented label={t('captions.lines')} value={String(st.maxLines)} options={[{ value: '2', label: '2' }, { value: '3', label: '3' }]} onChange={(v) => set({ maxLines: Number(v) })} />
         </ListRow>
@@ -130,6 +165,45 @@ function CaptionsTab({ s, t }: { s: AppStateMsg; t: T }) {
         </ListRow>
         <ListRow label={t('captions.hideInShare')} description={t('captions.hideInShareHint')}>
           <Toggle label={t('captions.hideInShare')} checked={st.contentProtection} onChange={(v) => set({ contentProtection: v })} />
+        </ListRow>
+      </Section>
+    </>
+  );
+}
+
+function TranslationTab({ s, t }: { s: AppStateMsg; t: T }) {
+  const st = s.settings;
+  const tr = s.translation;
+  // the helper starts on demand: ask for languages when the tab opens
+  useEffect(() => { void api().request('translation.languages'); }, []);
+  const names = new Intl.DisplayNames([s.lang], { type: 'language' });
+  const name = (id: string) => { try { return names.of(id) ?? id; } catch { return id; } };
+  const langs = [...tr.languages].filter((l) => l.status !== 'unsupported')
+    .sort((a, b) => (a.status === b.status ? name(a.id).localeCompare(name(b.id), s.lang) : a.status === 'installed' ? -1 : 1));
+  const matched = matchLanguage(st.translationTarget, tr.languages.map((l) => l.id));
+  const current = tr.languages.find((l) => l.id === matched);
+  if (tr.available === false) {
+    return <Section title={t('tab.translation')}><ListRow icon={Info} label={t('translation.unavailable')} /></Section>;
+  }
+  return (
+    <>
+      <CaptionPreview s={s} t={t} />
+      <Section title={t('tab.translation')} footer={t('translation.enableHint')}>
+        <ListRow label={t('translation.enable')}>
+          <Toggle label={t('translation.enable')} checked={st.translationEnabled} disabled={tr.available !== true} onChange={(v) => set({ translationEnabled: v })} />
+        </ListRow>
+        <ListRow label={t('translation.target')} description={current && current.status !== 'installed' ? t('translation.notInstalled') : tr.available === null ? t('translation.checking') : undefined}>
+          <Select label={t('translation.target')} value={matched ?? st.translationTarget} className="w-[230px]"
+            options={(langs.length ? langs : [{ id: st.translationTarget, status: 'installed' as const }]).map((l) => ({
+              value: l.id, label: l.status === 'installed' ? name(l.id) : `${name(l.id)} ${t('translation.download')}`,
+            }))}
+            onChange={(v) => set({ translationTarget: v })} />
+        </ListRow>
+        <ListRow label={t('translation.mode')}>
+          <Segmented label={t('translation.mode')} value={st.translationMode} options={[{ value: 'both', label: t('translation.modeBoth') }, { value: 'translation', label: t('translation.modeOnly') }]} onChange={(v) => set({ translationMode: v })} />
+        </ListRow>
+        <ListRow label={t('translation.manage')}>
+          <Button size="sm" onClick={() => void api().request('translation.openLanguageSettings')}>{t('action.openPrivacy')}</Button>
         </ListRow>
       </Section>
     </>
@@ -232,7 +306,7 @@ function AboutTab({ s, t }: { s: AppStateMsg; t: T }) {
 }
 
 // ---- window ------------------------------------------------------------------------------------
-const ICONS = { general: Settings2, captions: Captions, transcription: Cpu, privacy: Lock, about: Info };
+const ICONS = { general: Settings2, captions: Captions, translation: Languages, transcription: Cpu, privacy: Lock, about: Info };
 
 function SettingsWindow() {
   const s = useAppState();
@@ -261,6 +335,7 @@ function SettingsWindow() {
           {tab === 'transcription' && <TranscriptionTab s={s} t={t} />}
           {tab === 'privacy' && <PrivacyTab s={s} t={t} />}
           {tab === 'about' && <AboutTab s={s} t={t} />}
+          {tab === 'translation' && <TranslationTab s={s} t={t} />}
         </div>
       </main>
     </div>

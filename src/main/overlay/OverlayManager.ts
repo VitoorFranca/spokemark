@@ -1,13 +1,14 @@
 import { BrowserWindow, ipcMain, screen, type Display, type Rectangle } from 'electron';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
-import { AppearanceSchema, IPC, RenderedAckSchema, ResizeSchema, SubtitleViewSchema, type Appearance, type SubtitleViewMsg } from '../../shared/ipc';
+import { AppearanceSchema, IPC, OverlayExtraSchema, RenderedAckSchema, ResizeSchema, SubtitleViewSchema, type Appearance, type OverlayExtra, type SubtitleViewMsg } from '../../shared/ipc';
 import type { SettingsService } from '../settings/SettingsService';
 
 const DEFAULT_WIDTH_RATIO = 0.6;
 const EDGE_MARGIN = 80;
 
 type Look = Omit<Appearance, 'editMode' | 'status' | 'statusText' | 'editHint'>;
+const LINE_H = 1.35;
 
 /**
  * Transparent, frameless, always-on-top caption window.
@@ -21,6 +22,7 @@ export class OverlayManager extends EventEmitter {
   private status: Pick<Appearance, 'status' | 'statusText'> = { status: 'idle', statusText: '' };
   editHint = '';
   private lastView: SubtitleViewMsg = { version: 0, lines: [] };
+  private extra: OverlayExtra = { source: null, translation: '' };
   private saveTimer: NodeJS.Timeout | null = null;
 
   constructor(private readonly settings: SettingsService, private readonly rendererUrl: string | null) {
@@ -47,12 +49,16 @@ export class OverlayManager extends EventEmitter {
       if (e.sender !== this.win?.webContents) return;
       this.pushAppearance();
       this.sendView(this.lastView);
+      this.win?.webContents.send(IPC.extra, this.extra);
     });
   }
 
   private look(): Look {
     const s = this.settings.get();
-    return { captionPreset: s.captionPreset, captionFont: s.captionFont, fontSize: s.fontSize, opacity: s.opacity, maxLines: s.maxLines };
+    return {
+      captionPreset: s.captionPreset, captionFont: s.captionFont, fontSize: s.fontSize, opacity: s.opacity, maxLines: s.maxLines,
+      showSourceApp: s.showSourceApp, captionWaves: s.captionWaves, translationEnabled: s.translationEnabled, translationMode: s.translationMode,
+    };
   }
 
   /** Display chosen in Settings, or the one under the pointer. */
@@ -65,9 +71,12 @@ export class OverlayManager extends EventEmitter {
     return screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   }
 
+  /** Caption lines + optional source-app header + optional translation lines. */
   private height(): number {
     const s = this.settings.get();
-    return Math.round(s.fontSize * 1.35 * s.maxLines + 36);
+    const translationLines = s.translationEnabled && s.translationMode === 'both' ? (s.maxLines === 3 ? 2 : 1) : 0;
+    const header = s.showSourceApp ? 34 : 0;
+    return Math.round(s.fontSize * LINE_H * s.maxLines + s.fontSize * 0.86 * LINE_H * translationLines + header + 36);
   }
 
   private defaultBounds(d: Display): Rectangle {
@@ -202,6 +211,17 @@ export class OverlayManager extends EventEmitter {
   private pushAppearance(): void {
     const a = AppearanceSchema.parse({ ...this.look(), ...this.status, editMode: this.editMode, editHint: this.editHint });
     this.win?.webContents.send(IPC.appearance, a);
+  }
+
+  setExtra(e: Partial<OverlayExtra>): void {
+    const next = OverlayExtraSchema.parse({ ...this.extra, ...e });
+    if (JSON.stringify(next) === JSON.stringify(this.extra)) return;
+    this.extra = next;
+    this.win?.webContents.send(IPC.extra, next);
+  }
+
+  sendLevel(db: number): void {
+    if (this.win?.isVisible()) this.win.webContents.send(IPC.level, db);
   }
 
   sendView(v: SubtitleViewMsg): void {

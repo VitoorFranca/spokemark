@@ -13,6 +13,7 @@ import { VAD_BYTES } from '../../shared/models';
 import { APP_NAME } from '../../shared/brand';
 
 const SIZES = [24, 28, 34, 40] as const;
+const langName = (id: string, lang: string) => { try { return new Intl.DisplayNames([lang], { type: 'language' }).of(id) ?? id; } catch { return id; } };
 
 function MoreMenu({ t, onClose }: { t: ReturnType<typeof useT>; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -162,6 +163,13 @@ function Panel() {
           <IconButton icon={Move} label={t('panel.editOverlay')} onClick={() => void api().request('overlay.setEdit', !s.overlay.editMode)} aria-pressed={s.overlay.editMode} />
           <Toggle checked={s.overlay.visible} onChange={(v) => void api().request('overlay.setVisible', v)} label={t('panel.overlay')} />
         </div>
+        {s.translation.available !== false && (
+          <div className="flex items-center gap-2 px-3 h-10">
+            <span className="flex-1 text-[13px]">{t('panel.translation')}</span>
+            {s.settings.translationEnabled && <span className="text-[12px] text-[var(--text-2)]">{langName(s.settings.translationTarget, s.lang)}</span>}
+            <Toggle checked={s.settings.translationEnabled} onChange={(v) => void api().request('settings.update', { translationEnabled: v })} label={t('panel.translation')} />
+          </div>
+        )}
         <div className="flex items-center gap-2 px-3 h-10">
           <span className="flex-1 text-[13px]">{t('panel.model')}</span>
           <Select label={t('panel.model')} value={s.settings.model} className="w-[150px]"

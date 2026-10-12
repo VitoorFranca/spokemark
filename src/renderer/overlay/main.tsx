@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { Appearance, OverlayApi, SubtitleViewMsg } from '../../shared/ipc';
+import type { Appearance, OverlayApi, OverlayExtra, SubtitleViewMsg } from '../../shared/ipc';
 import { CaptionBox } from '../shared/CaptionBox';
 import './overlay.css';
 
@@ -28,14 +28,18 @@ function ResizeHandle() {
 function App() {
   const [view, setView] = useState<SubtitleViewMsg>({ version: 0, lines: [] });
   const [ap, setAp] = useState<Appearance | null>(null);
+  const [extra, setExtra] = useState<OverlayExtra>({ source: null, translation: '' });
+  const level = useRef(-90); // read by the waves' animation loop, no re-render per sample
 
   useEffect(() => {
     const offV = api.onView(setView);
     const offA = api.onAppearance(setAp);
+    const offE = api.onExtra(setExtra);
+    const offL = api.onLevel((db) => { level.current = db; });
     api.ready();
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') api.exitEdit(); };
     window.addEventListener('keydown', onKey);
-    return () => { offV(); offA(); window.removeEventListener('keydown', onKey); };
+    return () => { offV(); offA(); offE(); offL(); window.removeEventListener('keydown', onKey); };
   }, []);
 
   // Ack after the frame containing this version is painted (latency metrics).
@@ -51,7 +55,8 @@ function App() {
   return (
     <div className={`relative flex h-full w-full items-end justify-center ${ap.editMode ? 'drag' : ''}`}>
       <div className="relative w-full transition-opacity duration-300" style={{ opacity: showBox ? 1 : 0 }}>
-        <CaptionBox look={ap} lines={view.lines}>
+        <CaptionBox look={ap} lines={view.lines} source={extra.source} translation={extra.translation} translationEnabled={ap.translationEnabled}
+          translationMode={ap.translationMode} showSourceApp={ap.showSourceApp} waves={ap.captionWaves} level={level}>
           {ap.status === 'error' && !hasText ? (
             <div style={{ fontSize: '0.55em', color: '#FFB4A8' }}>{ap.statusText}</div>
           ) : ap.editMode && !hasText ? (

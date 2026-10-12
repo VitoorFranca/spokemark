@@ -15,7 +15,7 @@ export type CaptureStatus =
   | { event: 'audio-resumed' }
   | { event: 'device-changed'; outputDevice?: string }
   | { event: 'level'; rms: number }
-  | { event: 'sources'; apps: string[] }
+  | { event: 'sources'; apps: string[]; details?: { name: string; path: string; frontmost: boolean }[] }
   | { event: 'error'; message: string }
   | { event: 'stopped' };
 

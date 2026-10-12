@@ -342,10 +342,10 @@ AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &ou
 
 // Which apps are producing audio right now (for "source app" in the history).
 // Helper processes (e.g. a browser's audio service) are mapped to their parent app.
-func appName(forPid pid: pid_t) -> String? {
+func regularApp(forPid pid: pid_t) -> NSRunningApplication? {
     var p = pid
     for _ in 0..<6 {
-        if let app = NSRunningApplication(processIdentifier: p), app.activationPolicy == .regular, let name = app.localizedName { return name }
+        if let app = NSRunningApplication(processIdentifier: p), app.activationPolicy == .regular, app.localizedName != nil { return app }
         var info = kinfo_proc(); var size = MemoryLayout<kinfo_proc>.size
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, p]
         guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else { return nil }
@@ -356,29 +356,37 @@ func appName(forPid pid: pid_t) -> String? {
     return nil
 }
 
-func currentAudioSources() -> [String] {
+struct Source: Equatable { let name: String; let path: String; let frontmost: Bool }
+
+func currentAudioSources() -> [Source] {
     var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyProcessObjectList, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
     var size: UInt32 = 0
     guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size) == noErr, size > 0 else { return [] }
     var ids = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
     guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &ids) == noErr else { return [] }
-    var names = Set<String>()
+    var found: [String: Source] = [:]
     let me = getpid(), parent = getppid()
+    let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
     for obj in ids {
         guard getProp(obj, kAudioProcessPropertyIsRunningOutput, UInt32(0)).1 != 0 else { continue }
         let pid = getProp(obj, kAudioProcessPropertyPID, pid_t(0)).1
         if pid <= 0 || pid == me || pid == parent { continue }
-        if let n = appName(forPid: pid) { names.insert(n) }
+        if let app = regularApp(forPid: pid), let name = app.localizedName {
+            found[name] = Source(name: name, path: app.bundleURL?.path ?? "", frontmost: app.processIdentifier == front)
+        }
     }
-    return names.sorted()
+    return found.values.sorted { $0.name < $1.name }
 }
 
-var lastSources: [String] = []
+var lastSources: [Source] = []
 let sourcesTimer = DispatchSource.makeTimerSource(queue: .main)
 sourcesTimer.schedule(deadline: .now() + 1, repeating: 3)
 sourcesTimer.setEventHandler {
     let s = currentAudioSources()
-    if s != lastSources { lastSources = s; out.json(.status, ["event": "sources", "apps": s]) }
+    if s != lastSources {
+        lastSources = s
+        out.json(.status, ["event": "sources", "apps": s.map { $0.name }, "details": s.map { ["name": $0.name, "path": $0.path, "frontmost": $0.frontmost] }])
+    }
 }
 if wavPath == nil { sourcesTimer.resume() }
 

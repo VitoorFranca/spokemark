@@ -32,6 +32,12 @@ export const SettingsSchema = z.object({
   captionPosition: z.enum(['bottom', 'top']).default('bottom'),
   captionDisplay: z.string().max(40).default('cursor'), // 'cursor' or a display id
   overlayVisible: z.boolean().default(true),
+  showSourceApp: z.boolean().default(true), // app icon + name above the captions
+  captionWaves: z.boolean().default(true), // audio-reactive waves behind the captions
+  // translation (on-device, Apple Translation framework; macOS 26+)
+  translationEnabled: z.boolean().default(false),
+  translationTarget: z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/).default('pt-BR'),
+  translationMode: z.enum(['both', 'translation']).default('both'),
   contentProtection: z.boolean().default(false),
   /** Overlay bounds per display id (remembered per monitor). */
   boundsByDisplay: z.record(z.string(), BoundsSchema).default({}),

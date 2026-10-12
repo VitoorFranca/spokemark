@@ -33,6 +33,7 @@ export class CaptionsController extends EventEmitter {
   private levelN = 0;
   private levelLast = 0;
   sources: string[] = [];
+  sourceDetails: { name: string; path: string; frontmost: boolean }[] = [];
 
   constructor(model: ModelId, opts: { maxLines: number; maxCharsPerLine: number }) {
     super();
@@ -116,7 +117,7 @@ export class CaptionsController extends EventEmitter {
 
   private onCaptureStatus(s: CaptureStatus): void {
     if (s.event === 'level') return;
-    if (s.event === 'sources') { this.sources = s.apps; this.emit('sources', s.apps); return; }
+    if (s.event === 'sources') { this.sources = s.apps; this.sourceDetails = s.details ?? []; this.emit('sources', s.apps); return; }
     this.emit('log', `[capture] ${JSON.stringify(s)}`);
     if (s.event === 'silent-since-start' && s.permission !== 'authorized') {
       // The tap delivers digital silence when the TCC permission is missing.
@@ -157,6 +158,7 @@ export class CaptionsController extends EventEmitter {
     const wasRunning = this.capture !== null;
     if (wasRunning) this.emit('session', 'ended');
     this.sources = [];
+    this.sourceDetails = [];
     const c = this.capture, p = this.provider;
     this.capture = null;
     this.provider = null;

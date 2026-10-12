@@ -19,6 +19,10 @@ import { SettingsService } from './settings/SettingsService';
 import { TranscriptStore } from './store/TranscriptStore';
 import type { SubtitleView } from './subtitles/SubtitleManager';
 import { WindowManager } from './ui/WindowManager';
+import { SourceAppTracker, type SourceDetail } from './SourceApp';
+import { matchLanguage } from '../shared/lang';
+import { LiveTranslator } from './translate/LiveTranslator';
+import { TranslatorService, type TargetLanguage } from './translate/TranslatorService';
 
 // ---- identity & data location (before 'ready') ------------------------------
 app.setName(APP_NAME);
@@ -49,6 +53,12 @@ let permission: PermissionState = 'unknown';
 let historyRevision = 0;
 let shortcutErrors: AppStateMsg['shortcutErrors'] = [];
 let provisionalText = '';
+let translator: TranslatorService;
+let liveTranslator: LiveTranslator;
+let translationLanguages: TargetLanguage[] = [];
+const sourceTracker = new SourceAppTracker();
+let currentSource: string | null = null;
+const iconCache = new Map<string, string | null>();
 let quitting = false;
 const trayIcons: Record<'idle' | 'listening', Electron.NativeImage> = { idle: nativeImage.createEmpty(), listening: nativeImage.createEmpty() };
 
@@ -97,6 +107,7 @@ function snapshot(): AppStateMsg {
     shortcutErrors,
     historyRevision,
     sources: captions.sources,
+    translation: { available: translator?.available ?? null, languages: translationLanguages },
     app: { version: app.getVersion(), dataDir: dataDir() },
   });
 }
@@ -296,6 +307,22 @@ async function handleRequest(win: BrowserWindow | undefined, name: RequestName, 
     case 'app.revealData': await shell.openPath(dataDir()); return true;
     case 'onboarding.complete': settings.update({ onboardingDone: true }); windows.get('onboarding')?.close(); return true;
     case 'panel.hide': windows.hidePanel(); return true;
+    case 'translation.languages': {
+      translationLanguages = await translator.languages('en').catch(() => []);
+      // first time: default to the system language when it can be a target (else Spanish)
+      const ids = translationLanguages.filter((l) => l.status === 'installed').map((l) => l.id);
+      if (ids.length && !matchLanguage(settings.get().translationTarget, ids)) {
+        const sys = app.getPreferredSystemLanguages().map((l) => matchLanguage(l, ids)).find(Boolean);
+        settings.update({ translationTarget: sys ?? matchLanguage('es', ids) ?? ids[0]! });
+      }
+      broadcast();
+      return translationLanguages;
+    }
+    case 'translation.preview': {
+      const o = p as { text: string; target: string };
+      return translator.translate(o.text, o.target).catch(() => null);
+    }
+    case 'translation.openLanguageSettings': await shell.openExternal('x-apple.systempreferences:com.apple.Localization-Settings.extension'); return true;
     case 'panel.rendered': {
       const ms = performance.now() - windows.panelShownAt;
       log(`[panel] open-to-paint ${ms.toFixed(1)} ms`);
@@ -396,6 +423,39 @@ app.whenReady().then(async () => {
     overlay.sendView(v);
   });
   overlay.on('rendered', (version: number, ns: bigint) => metrics.onRendered(version, ns));
+
+  // ---- live translation (on-device; the helper runs only while translation is on) ----
+  translator = new TranslatorService();
+  translator.on('log', log);
+  liveTranslator = new LiveTranslator((text, target) => translator.translate(text, target), s0.translationTarget);
+  liveTranslator.on('translation', (t: { text: string }) => overlay.setExtra({ translation: t.text }));
+  const syncTranslator = () => {
+    const st = settings.get();
+    if (st.translationEnabled) { void translator.start().then(() => broadcast()); liveTranslator.setTarget(st.translationTarget); }
+    else { liveTranslator.stop(); overlay.setExtra({ translation: '' }); void translator.stop(); }
+  };
+  syncTranslator();
+  captions.on('view', (v: SubtitleView) => {
+    if (!settings.get().translationEnabled) return;
+    // translate the caption currently on screen (confirmed + provisional)
+    const text = v.lines.map((l) => [l.committed, l.provisional].filter(Boolean).join(' ')).join(' ').replace(/(^|\s)–(\s|$)/g, ' ').trim();
+    liveTranslator.update(text);
+  });
+
+  // ---- source app shown above the captions (real icon) ----
+  const updateSource = async (details: SourceDetail[]) => {
+    const pick = sourceTracker.pick(details);
+    const name = pick?.name ?? null;
+    if (name === currentSource) return;
+    currentSource = name;
+    if (!pick) { overlay.setExtra({ source: null }); return; }
+    let icon = iconCache.get(pick.path);
+    if (icon === undefined) {
+      try { icon = pick.path ? (await app.getFileIcon(pick.path, { size: 'normal' })).toDataURL() : null; } catch { icon = null; }
+      iconCache.set(pick.path, icon);
+    }
+    if (currentSource === name) overlay.setExtra({ source: { name: pick.name, icon } });
+  };
   overlay.on('edit-exit', () => setEditMode(false));
   captions.on('indicator', (_i: Indicator, text: string) => {
     overlay.setStatus({ status: captions.state.state, statusText: text });
@@ -405,7 +465,7 @@ app.whenReady().then(async () => {
   captions.on('log', log);
   captions.on('session', (what: 'started' | 'ended') => {
     if (what === 'started') { store.persist = settings.get().historyEnabled; store.startSession(settings.get().model); provisionalText = ''; sendLive(liveReset()); }
-    else { store.endSession(); provisionalText = ''; sendTailSoon(); }
+    else { store.endSession(); provisionalText = ''; sendTailSoon(); sourceTracker.reset(); currentSource = null; overlay.setExtra({ source: null, translation: '' }); }
   });
   captions.on('update', (u: TranscriptUpdate) => {
     store.addConfirmed(u.confirmed, u.utteranceEnd);
@@ -413,8 +473,9 @@ app.whenReady().then(async () => {
     sendTailSoon();
     if (E2E.transcriptFile && u.confirmed.length) appendFileSync(E2E.transcriptFile, JSON.stringify({ t: Date.now(), words: u.confirmed.map((w) => w.text.trim()), end: u.utteranceEnd }) + '\n');
   });
-  captions.on('sources', (apps: string[]) => { for (const a of apps) store.noteSourceApp(a); broadcast(); });
+  captions.on('sources', (apps: string[]) => { for (const a of apps) store.noteSourceApp(a); void updateSource(captions.sourceDetails); broadcast(); });
   captions.on('level', (db: number) => {
+    if (settings.get().captionWaves) overlay.sendLevel(db);
     for (const name of ['panel', 'onboarding'] as const) {
       const w = windows.get(name);
       if (w?.isVisible()) w.webContents.send(CH.level, db);
@@ -430,7 +491,8 @@ app.whenReady().then(async () => {
   settings.on('change', (n: Settings, keys: (keyof Settings)[]) => {
     const has = (...k: (keyof Settings)[]) => k.some((x) => keys.includes(x));
     if (has('language')) { buildAppMenu(); overlay.editHint = t('overlay.editHint'); lastTrayState = ''; }
-    if (has('captionPreset', 'captionFont', 'fontSize', 'opacity', 'maxLines', 'language')) overlay.relayout();
+    if (has('captionPreset', 'captionFont', 'fontSize', 'opacity', 'maxLines', 'language', 'showSourceApp', 'captionWaves', 'translationEnabled', 'translationMode')) overlay.relayout();
+    if (has('translationEnabled', 'translationTarget')) syncTranslator();
     if (has('maxLines')) captions.setLayout({ maxLines: n.maxLines });
     if (has('captionPosition', 'captionDisplay')) { overlay.relayout({ resetPlacement: true }); if (overlay.visible) overlay.show(); }
     if (has('contentProtection')) overlay.setContentProtection(n.contentProtection);
@@ -496,6 +558,7 @@ app.whenReady().then(async () => {
       overlayId: () => overlay.win?.getMediaSourceId() ?? null,
       state: () => snapshot(),
       pids: () => captions.pids,
+      translatorPid: () => translator.pid ?? null,
       toggleCaptions: () => toggleCaptions(),
       setOverlayEdit: (on: boolean) => setEditMode(on),
       langName: (l: Lang) => LANG_NAMES[l],

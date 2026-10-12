@@ -2,6 +2,7 @@
 # Builds the native helpers into build/bin:
 #   audiotap        (Swift, CoreAudio Process Tap)
 #   whisper-worker  (C++, whisper.cpp static + Metal)
+#   translator      (Swift, Apple Translation framework)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WHISPER_TAG="v1.9.5"
@@ -19,6 +20,10 @@ fi
 
 echo "==> audiotap"
 swiftc -O -target "arm64-apple-macos$MACOS_MIN" "$ROOT/native/audiotap/main.swift" -o "$OUT/audiotap"
+
+echo "==> translator (Apple Translation, macOS 26+; weak-linked so it starts on 14.2)"
+swiftc -O -parse-as-library -target "arm64-apple-macos$MACOS_MIN" -Xlinker -weak_framework -Xlinker Translation \
+  "$ROOT/native/translator/main.swift" -o "$OUT/translator"
 
 echo "==> whisper-worker (whisper.cpp $WHISPER_TAG, Metal)"
 cmake -S "$ROOT/native/whisper-worker" -B "$ROOT/build/whisper-worker" \

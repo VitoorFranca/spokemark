@@ -36,6 +36,10 @@ export const AppStateSchema = z.object({
   shortcutErrors: z.array(z.enum(['shortcutToggle', 'shortcutOverlay', 'shortcutEdit'])),
   historyRevision: z.number().int(),
   sources: z.array(z.string()),
+  translation: z.object({
+    available: z.boolean().nullable(), // null = not checked yet (helper not started)
+    languages: z.array(z.object({ id: z.string(), status: z.enum(['installed', 'supported', 'unsupported']) })),
+  }),
   app: z.object({ version: z.string(), dataDir: z.string() }),
 });
 export type AppStateMsg = z.infer<typeof AppStateSchema>;
@@ -63,7 +67,7 @@ export type SessionRowMsg = z.infer<typeof SessionRowSchema>;
 
 export const RANGES = ['today', 'week', 'month', 'all'] as const;
 export const WINDOWS = ['main', 'settings', 'onboarding'] as const;
-export const SETTINGS_TABS = ['general', 'captions', 'transcription', 'privacy', 'about'] as const;
+export const SETTINGS_TABS = ['general', 'captions', 'translation', 'transcription', 'privacy', 'about'] as const;
 
 /** Every renderer -> main request: name -> payload schema. */
 export const Requests = {
@@ -92,6 +96,9 @@ export const Requests = {
   'onboarding.complete': z.undefined(),
   'panel.hide': z.undefined(),
   'panel.rendered': z.undefined(),
+  'translation.languages': z.undefined(),
+  'translation.preview': z.object({ text: z.string().max(500), target: z.string().max(20) }),
+  'translation.openLanguageSettings': z.undefined(),
 } as const;
 export type RequestName = keyof typeof Requests;
 export type RequestPayload<K extends RequestName> = z.infer<(typeof Requests)[K]>;
