@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-12
+
 ### Fixed
 - Closing the onboarding window after granting permission and downloading the model no longer brings it back on the next launch.
 
@@ -26,5 +28,6 @@ First public release. Unsigned (ad-hoc) build for Apple Silicon, macOS 14.2+.
 - English and Portuguese (Brazil) interface.
 - Release workflow producing `.dmg`/`.zip` and SHA-256 checksums.
 
-[Unreleased]: https://github.com/VitoorFranca/spokemark/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/VitoorFranca/spokemark/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/VitoorFranca/spokemark/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/VitoorFranca/spokemark/releases/tag/v0.1.0

@@ -92,8 +92,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MODE: ${{ steps.signing.outputs.mode }}
         run: |
+          # this version's section of CHANGELOG.md ("## [x.y.z] ..." up to the next "## [")
+          awk -v v="${GITHUB_REF_NAME#v}" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on' CHANGELOG.md > "$RUNNER_TEMP/changes.md"
           {
             echo "Spokemark ${GITHUB_REF_NAME} for macOS 14.2+ on Apple Silicon."
+            if [ -s "$RUNNER_TEMP/changes.md" ]; then echo; cat "$RUNNER_TEMP/changes.md"; fi
             echo
             echo "Speech models are downloaded on first launch (checksum-verified) and everything runs on your Mac."
             if [ "$MODE" = "adhoc" ]; then
