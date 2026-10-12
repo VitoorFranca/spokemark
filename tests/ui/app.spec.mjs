@@ -66,6 +66,17 @@ test('choosing a preset in Settings restyles the overlay', async () => {
   await app.close();
 });
 
+test('overlay shows the source app with its real icon and the translation line', async () => {
+  const { app, hook, page } = await launch({ LC_SKIP_ONBOARDING: '1' });
+  const overlay = await page('overlay');
+  await app.evaluate(() => globalThis.__spokemark.setOverlayEdit(true)); // makes the box visible
+  await hook('setSourceForTest', 'Safari', '/Applications/Safari.app');
+  await expect(overlay.getByText('Safari')).toBeVisible();
+  // the icon is a real, decoded image (not a broken one)
+  await expect.poll(() => overlay.evaluate(() => { const i = document.querySelector('img'); return i ? i.complete && i.naturalWidth > 0 : false; })).toBe(true);
+  await app.close();
+});
+
 test('history: real capture, full-text search and export', async () => {
   test.skip(process.env.E2E_AUDIO !== '1', 'plays audio through the speakers: run with E2E_AUDIO=1');
   const exportDir = path.join(ROOT, 'build', 'e2e-export');

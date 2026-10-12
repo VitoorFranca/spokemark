@@ -75,6 +75,16 @@ Each entry lists what was chosen, the alternatives that were discarded, and why.
 - **Transition context:** after a pause, the next window re-sends the last 3 s of the previous utterance (`turnContextS`) so the model sees both voices; repeated words are removed by text alignment. Apollo 13 audio: 1–2 of 21 turns without context, 11–12 with it; cost ≈ +0.4 s p50 first appearance.
 - Discarded: speaker-embedding diarization (WeSpeaker/3D-Speaker via ONNX) — new native dependency, uncertain real-time quality.
 
+## Translation
+
+**Chosen: Apple's Translation framework in a Swift helper (`native/translator`)**, `TranslationSession(installedSource:target:)` (macOS 26+, no SwiftUI needed). On-device, free, no network, uses the language packs installed in System Settings; weak-linked so the app still runs on macOS 14.2 (translation is then shown as unavailable).
+- Discarded: Whisper's `translate` task (only into English); local MT models (NLLB/Marian via ONNX — large downloads and a new runtime); any cloud API (breaks the "nothing leaves the Mac" promise).
+- The visible caption (confirmed + provisional) is translated with one request in flight, latest-wins and a bounded cache (`LiveTranslator`).
+
+**Source app icon:** `NSWorkspace.icon(forFile:)` in `audiotap` (64 px PNG). Discarded: Electron `app.getFileIcon`, which returned a generic placeholder for apps on macOS 26.
+
+**Reference product:** these features were requested after a commercial app ("Subtitles Live"). Its source is published under the FSL-1.1 (no competing use), so nothing was copied or read from it; the implementation is independent.
+
 ## App
 
 - **Overlay:** `BrowserWindow` with `type: 'panel'` (documented to "float on top of full-screened apps" and "appear on all spaces"), plus `setAlwaysOnTop(true, 'screen-saver')` and `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })`. Click-through: `setIgnoreMouseEvents(true)`.

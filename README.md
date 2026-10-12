@@ -18,6 +18,8 @@ Calls, videos, podcasts — 100% on-device. No cloud, no account, no audio ever 
 [Build from source](#build-from-source) ·
 [Contributing](CONTRIBUTING.md)
 
+<img src="docs/screenshots/overlay-translation-1.png" width="820" alt="Spokemark caption overlay with the source app, waves and a live Spanish translation">
+
 <img src="docs/screenshots/panel-listening-dark.png" width="300" alt="Spokemark menu bar panel while listening">
 &nbsp;
 <img src="docs/screenshots/main-live-active-light.png" width="520" alt="Spokemark live transcript window">
@@ -32,6 +34,8 @@ Calls, videos, podcasts — 100% on-device. No cloud, no account, no audio ever 
 - **Live transcript and searchable history.** Read the full session in a large window with timestamps, then search every past session (SQLite full-text search) and export to `.txt`, `.srt` or `.md`. History is text-only, can be turned off, and expires after 30 days by default.
 - **Menu bar first.** Start and stop with one click or a global shortcut, see what's being captured, and fix problems (permission, missing model) right from the panel.
 - **Made for reading.** Caption presets (Standard, High contrast, Cinema), font, size, background opacity, 2–3 lines, top or bottom, per-display position — with a live preview.
+- **Live translation.** Show the translation under the original caption (or only the translation), translated on-device with Apple's Translation framework — macOS 26 or later, using the languages installed in System Settings.
+- **Knows what's playing.** The overlay shows the icon and name of the app the audio comes from, with soft waves that follow the voice.
 - **Speaker changes (experimental).** The *Enhanced · speakers* model starts a new line when a different person starts talking.
 - **Native feel.** Light and dark mode, vibrancy, full keyboard navigation, VoiceOver labels, English and Brazilian Portuguese.
 

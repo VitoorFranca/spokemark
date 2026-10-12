@@ -33,7 +33,7 @@ export class CaptionsController extends EventEmitter {
   private levelN = 0;
   private levelLast = 0;
   sources: string[] = [];
-  sourceDetails: { name: string; path: string; frontmost: boolean }[] = [];
+  sourceDetails: { name: string; path: string; frontmost: boolean; icon?: string }[] = [];
 
   constructor(model: ModelId, opts: { maxLines: number; maxCharsPerLine: number }) {
     super();

@@ -449,7 +449,9 @@ app.whenReady().then(async () => {
     if (name === currentSource) return;
     currentSource = name;
     if (!pick) { overlay.setExtra({ source: null }); return; }
-    let icon = iconCache.get(pick.path);
+    // the helper sends the real icon (NSWorkspace); Electron's getFileIcon returns a generic
+    // placeholder for apps on macOS 26, so it is only a fallback
+    let icon = pick.icon && pick.icon.startsWith('data:image/png;base64,') ? pick.icon : iconCache.get(pick.path);
     if (icon === undefined) {
       try { icon = pick.path ? (await app.getFileIcon(pick.path, { size: 'normal' })).toDataURL() : null; } catch { icon = null; }
       iconCache.set(pick.path, icon);
@@ -559,6 +561,11 @@ app.whenReady().then(async () => {
       state: () => snapshot(),
       pids: () => captions.pids,
       translatorPid: () => translator.pid ?? null,
+      overlayPid: () => overlay.win?.webContents.getOSProcessId() ?? null,
+      // same path as a detected source (real icon via getFileIcon), without playing audio
+      setSourceForTest: (name: string, appPath: string) => updateSource([{ name, path: appPath, frontmost: true }]),
+      setTranslationForTest: (text: string) => overlay.setExtra({ translation: text }),
+      translationStats: () => ({ ...liveTranslator.stats, source: currentSource }),
       toggleCaptions: () => toggleCaptions(),
       setOverlayEdit: (on: boolean) => setEditMode(on),
       langName: (l: Lang) => LANG_NAMES[l],

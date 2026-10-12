@@ -82,13 +82,14 @@ import { SourceAppTracker } from '../../src/main/SourceApp';
 
 describe('SourceAppTracker', () => {
   const s = (name: string, frontmost = false) => ({ name, path: `/Applications/${name}.app`, frontmost });
-  it('prefers the frontmost app, else the one that started playing last', () => {
+  it('picks the app that started playing last; frontmost only breaks ties', () => {
     const t = new SourceAppTracker();
     expect(t.pick([], 0)).toBeNull();
-    expect(t.pick([s('Google Chrome')], 1)!.name).toBe('Google Chrome');
-    expect(t.pick([s('Google Chrome'), s('zoom.us')], 2)!.name).toBe('zoom.us'); // newest
-    expect(t.pick([s('Google Chrome', true), s('zoom.us')], 3)!.name).toBe('Google Chrome'); // frontmost wins
-    expect(t.pick([s('zoom.us')], 4)!.name).toBe('zoom.us');
+    expect(t.pick([s('Google Chrome', true)], 1)!.name).toBe('Google Chrome');
+    // a silent browser in front keeps its stream open; the newly playing app wins
+    expect(t.pick([s('Google Chrome', true), s('iTerm2')], 2)!.name).toBe('iTerm2');
+    expect(t.pick([s('Google Chrome', true), s('iTerm2')], 3)!.name).toBe('iTerm2');
+    expect(t.pick([s('zoom.us', true), s('Spotify')], 4)!.name).toBe('zoom.us'); // both new at once: frontmost
   });
 });
 

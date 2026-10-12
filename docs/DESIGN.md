@@ -44,6 +44,12 @@ The panel is created on the menu bar icon's `mouse-enter`, so it is ready by the
 - **Search:** each term becomes a quoted prefix (safe against FTS syntax); results show a snippet with the match highlighted.
 - **Source app:** `audiotap` lists processes with `kAudioProcessPropertyIsRunningOutput` and walks up to the "regular" parent app (Chrome's audio service → "Google Chrome"); a session keeps the most frequent one.
 
+## Overlay header, translation and waves
+
+- **Header:** app icon + name above the captions, like system notifications; optional (Settings › Captions).
+- **Translation:** smaller (0.86×) and dimmer line(s) below the original, so the original stays primary; "translation only" swaps them.
+- **Waves:** a canvas behind the text near the bottom edge, four soft colored sine waves whose amplitude follows the audio level. This replaces the earlier "no looping animation" rule for this element on request: the animation runs only while there is sound, settles into a still frame in silence, and is disabled with Reduce Motion. Cost: ≈ +1.7 % of one core while speech plays.
+
 ## Overlay
 
 Behavior unchanged from the MVP (click-through, `type: 'panel'`, all Spaces, full screen); styles from the presets. Edit mode shows a subtle frame, a corner handle and the hint "Drag to move · Esc to finish"; the window takes focus only in this mode so Esc works. The overlay intentionally does **not** use brand colors: white on black is the most legible.

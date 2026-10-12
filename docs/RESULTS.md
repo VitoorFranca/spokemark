@@ -108,6 +108,19 @@ All within the ±10 % budget. Notes:
 
 After the bundle ID changed to `app.spokemark.desktop`, macOS treated the app as new: the onboarding's *Allow access* showed the system prompt, the step switched to "Permission granted" by itself (polling, no restart), and captions worked in the test step. Closing the onboarding window at that point did not mark it as finished; fixed so that closing it after the required steps counts as done.
 
+## 6. Translation, source app and waves (v0.2.0)
+
+Development build (same code as the package), isolated data dir, `ref1` played through the system output (`tests/ui/live-translation.mjs`).
+
+| Test | Result |
+|---|---|
+| On-device translation (Apple Translation, macOS 26.6) en → es / pt-BR | ~300 ms per request once warm; first request 0.6–1.8 s |
+| Live translation during a 31 s passage | 42–44 requests, 0 errors, 2–4 superseded (latest wins), 2–3 cache hits |
+| Source app detection | `afplay` attributed to its parent app (iTerm2) with the real icon; a silent browser tab keeps an open stream and is **not** chosen once another app starts playing |
+| Waves CPU (overlay renderer, while speech plays) | 2.4 % of one core with waves vs 0.7 % without (≈ +1.7 %); still frames in silence |
+| Electron `app.getFileIcon` on macOS 26 | returns a generic placeholder for apps, so icons come from `NSWorkspace` in `audiotap` |
+| UI tests | 5 passed (adds: overlay shows the source app with a real, decoded icon) |
+
 ## Known limitations
 
 - **Source app is a heuristic.** `audiotap` reports apps that have an *open audio output stream* (`kAudioProcessPropertyIsRunningOutput`), not the app that is actually audible. A browser keeps its stream open with a paused video, so a session can be attributed to "Google Chrome" while the speech came from another process (observed in our tests with `afplay`).

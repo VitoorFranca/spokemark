@@ -344,7 +344,7 @@ AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &ou
 // Helper processes (e.g. a browser's audio service) are mapped to their parent app.
 func regularApp(forPid pid: pid_t) -> NSRunningApplication? {
     var p = pid
-    for _ in 0..<6 {
+    for _ in 0..<12 {
         if let app = NSRunningApplication(processIdentifier: p), app.activationPolicy == .regular, app.localizedName != nil { return app }
         var info = kinfo_proc(); var size = MemoryLayout<kinfo_proc>.size
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, p]
@@ -357,6 +357,31 @@ func regularApp(forPid pid: pid_t) -> NSRunningApplication? {
 }
 
 struct Source: Equatable { let name: String; let path: String; let frontmost: Bool }
+
+// The real app icon (NSWorkspace), 64 px PNG as a data URL; cached per path.
+var iconCache: [String: String] = [:]
+func iconDataURL(_ path: String) -> String? {
+    if path.isEmpty { return nil }
+    if let c = iconCache[path] { return c }
+    let img = NSWorkspace.shared.icon(forFile: path)
+    let px = 64
+    guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8, samplesPerPixel: 4,
+                                     hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+    img.draw(in: NSRect(x: 0, y: 0, width: px, height: px), from: .zero, operation: .copy, fraction: 1)
+    NSGraphicsContext.restoreGraphicsState()
+    guard let png = rep.representation(using: .png, properties: [:]) else { return nil }
+    let url = "data:image/png;base64," + png.base64EncodedString()
+    iconCache[path] = url
+    return url
+}
+
+func executablePath(_ pid: pid_t) -> String? {
+    var buf = [CChar](repeating: 0, count: 4096)
+    let n = proc_pidpath(pid, &buf, UInt32(buf.count))
+    return n > 0 ? String(cString: buf) : nil
+}
 
 func currentAudioSources() -> [Source] {
     var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyProcessObjectList, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
@@ -373,6 +398,10 @@ func currentAudioSources() -> [Source] {
         if pid <= 0 || pid == me || pid == parent { continue }
         if let app = regularApp(forPid: pid), let name = app.localizedName {
             found[name] = Source(name: name, path: app.bundleURL?.path ?? "", frontmost: app.processIdentifier == front)
+        } else if let exe = executablePath(pid) {
+            // command-line players (afplay, mpv, …): show the tool itself
+            let name = (exe as NSString).lastPathComponent
+            found[name] = Source(name: name, path: exe, frontmost: false)
         }
     }
     return found.values.sorted { $0.name < $1.name }
@@ -385,7 +414,8 @@ sourcesTimer.setEventHandler {
     let s = currentAudioSources()
     if s != lastSources {
         lastSources = s
-        out.json(.status, ["event": "sources", "apps": s.map { $0.name }, "details": s.map { ["name": $0.name, "path": $0.path, "frontmost": $0.frontmost] }])
+        out.json(.status, ["event": "sources", "apps": s.map { $0.name },
+                           "details": s.map { ["name": $0.name, "path": $0.path, "frontmost": $0.frontmost, "icon": iconDataURL($0.path) ?? ""] }])
     }
 }
 if wavPath == nil { sourcesTimer.resume() }

@@ -1,7 +1,8 @@
 // Picks the app shown above the captions among the apps with an open audio output
-// stream, and resolves its real icon. A heuristic: macOS does not tell which app is
-// audible, so prefer the frontmost one, else the one that started playing last.
-export interface SourceDetail { name: string; path: string; frontmost: boolean }
+// stream. A heuristic: macOS does not tell which app is audible, and apps such as
+// browsers keep a stream open while silent. The app that started playing most
+// recently wins (you just pressed play there); the frontmost app breaks ties.
+export interface SourceDetail { name: string; path: string; frontmost: boolean; icon?: string }
 
 export class SourceAppTracker {
   private firstSeen = new Map<string, number>();
@@ -11,9 +12,8 @@ export class SourceAppTracker {
     for (const k of [...this.firstSeen.keys()]) if (!names.has(k)) this.firstSeen.delete(k);
     for (const s of sources) if (!this.firstSeen.has(s.name)) this.firstSeen.set(s.name, now);
     if (sources.length === 0) return null;
-    const front = sources.find((s) => s.frontmost);
-    if (front) return front;
-    return [...sources].sort((a, b) => (this.firstSeen.get(b.name)! - this.firstSeen.get(a.name)!) || a.name.localeCompare(b.name))[0]!;
+    return [...sources].sort((a, b) =>
+      (this.firstSeen.get(b.name)! - this.firstSeen.get(a.name)!) || Number(b.frontmost) - Number(a.frontmost) || a.name.localeCompare(b.name))[0]!;
   }
 
   reset(): void {

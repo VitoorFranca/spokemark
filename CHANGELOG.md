@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-12
+
+### Added
+- **Live translation**, on-device with Apple's Translation framework (macOS 26+): show the original with the translation below, or the translation only. Settings › Translation and a panel toggle. Nothing is sent to the internet; languages are the ones installed in System Settings.
+- **Source app header**: the overlay shows the icon and name of the app that is playing (a heuristic: the app that started playing most recently).
+- **Audio-reactive waves** behind the captions; they stay still in silence and with Reduce Motion. Can be turned off.
+
 ## [0.1.1] - 2026-10-12
 
 ### Fixed

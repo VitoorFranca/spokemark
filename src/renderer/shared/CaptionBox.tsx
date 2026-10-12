@@ -52,10 +52,10 @@ export function Waves({ level }: { level: { current: number } }) {
         for (let x = 0; x <= w; x += 4) {
           const u = x / w;
           const env = Math.sin(Math.PI * u); // calm at the edges
-          const y = h * 0.74 + Math.sin(u * Math.PI * 2 * wv.freq + t * wv.speed + wv.phase) * (2 + amp * h * 0.22) * env;
+          const y = h * 0.84 + Math.sin(u * Math.PI * 2 * wv.freq + t * wv.speed + wv.phase) * (2 + amp * h * 0.22) * env;
           x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = `rgba(${wv.color},${wv.alpha * (0.55 + amp * 0.45)})`;
+        ctx.strokeStyle = `rgba(${wv.color},${wv.alpha * (0.45 + amp * 0.4)})`;
         ctx.lineWidth = 1.4;
         ctx.stroke();
       }
