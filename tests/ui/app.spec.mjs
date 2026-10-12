@@ -24,6 +24,16 @@ test('onboarding completes when permission is already granted', async () => {
   await expect.poll(helperCount).toBe('0');
 });
 
+test('closing onboarding after the required steps counts as finished', async () => {
+  const { app, page, dataDir } = await launch();
+  const p = await page('onboarding');
+  await p.getByRole('button', { name: /Continuar|Continue/ }).click();
+  await expect(p.getByText(/Permissão concedida|Permission granted/)).toBeVisible({ timeout: 10_000 });
+  await p.close(); // the user closes the window instead of clicking the final button
+  await expect.poll(() => { try { return JSON.parse(readFileSync(path.join(dataDir, 'settings.json'), 'utf8')).onboardingDone; } catch { return null; } }, { timeout: 5000 }).toBe(true);
+  await app.close();
+});
+
 test('start and stop from the menu bar panel', async () => {
   const { app, hook, page } = await launch({ LC_SKIP_ONBOARDING: '1' });
   await hook('showPanel');

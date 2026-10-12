@@ -101,8 +101,12 @@ All within the ±10 % budget. Notes:
 | UI test | Result |
 |---|---|
 | Unit tests (vitest) | 41 passed |
-| Playwright for Electron | 4 passed: onboarding with permission already granted; start/stop from the panel; preset in Settings restyles the overlay; **real capture → full-text search → `.srt` export** (plays audio) |
+| Playwright for Electron | 5 passed: onboarding with permission already granted; closing onboarding after the required steps; start/stop from the panel; preset in Settings restyles the overlay; **real capture → full-text search → `.srt` export** (plays audio) |
 | Panel open-to-paint | hover-warmed p50 47 ms / p95 59 ms; cold p50 138 ms / p95 188 ms |
+
+### Permission flow with a new bundle identifier (packaged app, by the user)
+
+After the bundle ID changed to `app.spokemark.desktop`, macOS treated the app as new: the onboarding's *Allow access* showed the system prompt, the step switched to "Permission granted" by itself (polling, no restart), and captions worked in the test step. Closing the onboarding window at that point did not mark it as finished; fixed so that closing it after the required steps counts as done.
 
 ## Known limitations
 

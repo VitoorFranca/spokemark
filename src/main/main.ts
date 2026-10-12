@@ -454,6 +454,13 @@ app.whenReady().then(async () => {
     if (!win || !windows.subscribers.includes(win)) throw new Error('unknown sender');
     return handleRequest(win, name as RequestName, p.data);
   });
+  // Closing onboarding once the required steps are done (permission + model) counts as
+  // finishing it; before that it shows again on the next launch.
+  windows.on('closed', (name: string) => {
+    if (name === 'onboarding' && !settings.get().onboardingDone && permission === 'granted' && models.isReady(settings.get().model)) {
+      settings.update({ onboardingDone: true });
+    }
+  });
   windows.on('opened', (name: string, w: BrowserWindow) => {
     w.webContents.on('did-finish-load', () => { w.webContents.send(CH.state, snapshot()); });
     if (name === 'panel') w.on('show', () => { w.webContents.send(CH.command, { type: 'panel-shown' }); w.webContents.send(CH.state, snapshot()); w.webContents.send(CH.live, liveReset()); schedulePermissionPoll(); });

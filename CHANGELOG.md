@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+- Closing the onboarding window after granting permission and downloading the model no longer brings it back on the next launch.
+
 ### Changed
 - Permanent bundle identifier `app.spokemark.desktop` (was `dev.local.livecaptions`). macOS asks for the *System Audio Recording* permission again once after updating from 0.1.0.
 
