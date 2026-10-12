@@ -11,13 +11,14 @@ concurrency:
 
 jobs:
   test:
-    runs-on: macos-15 # Apple Silicon: matches the only supported architecture
+    runs-on: macos-26 # Xcode 26 SDK (Translation API for macOS 26); builds arm64
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
+      - run: uname -m && xcrun --show-sdk-version && swift --version | head -1
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
