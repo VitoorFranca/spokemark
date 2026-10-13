@@ -120,6 +120,7 @@ Development build (same code as the package), isolated data dir, `ref1` played t
 | Waves CPU (overlay renderer, while speech plays) | 2.4 % of one core with waves vs 0.7 % without (≈ +1.7 %); still frames in silence |
 | Electron `app.getFileIcon` on macOS 26 | returns a generic placeholder for apps, so icons come from `NSWorkspace` in `audiotap` |
 | UI tests | 5 passed (adds: overlay shows the source app with a real, decoded icon) |
+| Network while captioning (packaged v0.2.0, 2026-10-12) | captions and translation on for 25 s, speech playing: `lsof -nP -i -a -p <app and helper PIDs>` listed **no sockets** |
 
 ## Known limitations
 
