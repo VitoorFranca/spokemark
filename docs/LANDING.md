@@ -1,10 +1,11 @@
 # Landing page
 
-`site/` is the project's landing page: static HTML + CSS + one small inline script, with no build step. It loads no third-party scripts, sets no cookies and has no analytics; the fonts are self-hosted. `.github/workflows/pages.yml` publishes it to GitHub Pages on every push to `main` that touches `site/`.
+`site/` is the project's landing page: static HTML + CSS, an inline script and a WebGL module (`js/ribbon.js`), with no build step. `site/dev/ribbon/` renders the ribbon on its own. It loads no third-party scripts, sets no cookies and has no analytics; the fonts are self-hosted. `.github/workflows/pages.yml` publishes it to GitHub Pages on every push to `main` that touches `site/`.
 
 Preview locally: `cd site && python3 -m http.server 8765` → http://localhost:8765.
 
-- **Direction, diagnosis and type/color/grid tokens:** [`landing/DIRECTION.md`](landing/DIRECTION.md)
+- **Current design (v2): diagnosis of v1, direction, ribbon shader, verification:** [`landing/V2.md`](landing/V2.md)
+- **Previous direction (v1, superseded):** [`landing/DIRECTION.md`](landing/DIRECTION.md)
 - **Every claim and its source:** [`landing/CLAIMS.md`](landing/CLAIMS.md)
 - **Before/after screenshots:** `landing/screenshots/{before,after}/` (375, 768, 1280, 1920 px)
 - **Demo data:** [`landing/demo-jfk.log`](landing/demo-jfk.log), the real streaming output replayed by the hero
@@ -13,9 +14,9 @@ Preview locally: `cd site && python3 -m http.server 8765` → http://localhost:8
 
 - A claim goes on the page only with a line in `CLAIMS.md`. Numbers come from `docs/RESULTS.md`; add them there first, with the machine and conditions.
 - No "signed" (releases are ad-hoc signed and not notarized; say "SHA-256 checksums"), no recognition languages other than English, and no compatibility we haven't tested stated as tested.
-- The accent color has three uses only: the primary CTA, the word being said in the demo, and focus/current states.
+- The accent color is used only for the headline's second line, the CTA icon, the word being said in the caption, and focus/active states.
 - The hero demo replays `demo-jfk.log` exactly. If the pipeline changes, re-run `scripts/e2e-transcribe.sh` on `jfk.wav` (it plays audio) and replace the log and the `LOG` array together.
-- Screenshots are of the real app in English, captured with an isolated `LC_DATA_DIR`. Each one is exported as WebP at 1× and 2×, with a light and a dark version, plus `width`/`height`.
+- Screenshots are of the real app in English and dark mode, captured with an isolated `LC_DATA_DIR`. Each one is exported as WebP at 1× and 2×, with `width`/`height`.
 
 ## On each release
 
