@@ -13,3 +13,8 @@ tests/e2e/dialogues/*.wav
 test-results/
 build/e2e-export/
 dist-release/
+
+# Third-party design reference (Dribbble upload): kept local, not redistributed
+docs/landing/reference/
+docs/landing/screenshots/v2/*-vs-ref*
+docs/landing/screenshots/v2/ribbon-compare.png
