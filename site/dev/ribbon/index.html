@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Ribbon — dev</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; color: #8a93a8; font: 12px ui-monospace, monospace; }
+    canvas { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; height: 72vh; display: block; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%); mask-image: linear-gradient(to bottom, transparent 0, #000 14%); }
+    #hud { position: fixed; left: 12px; top: 10px; }
+  </style>
+</head>
+<body>
+  <div id="hud">ribbon · <span id="fps">–</span> fps · energy <span id="en">0</span> · ?phase=&amp;energy=&amp;still=1</div>
+  <canvas id="c" aria-hidden="true"></canvas>
+  <script type="module">
+    import { createRibbon } from '../../js/ribbon.js';
+    const q = new URLSearchParams(location.search);
+    const r = createRibbon(document.getElementById('c'), { parallax: true });
+    window.__ribbon = r;
+    if (q.has('energy')) r.setEnergy(+q.get('energy'), true);
+    if (q.has('phase')) r.setPhase(+q.get('phase'));
+    if (q.get('still') === '1') { if (q.has('energy')) { /* settle */ } r.render(); document.body.dataset.ready = '1'; }
+    else {
+      r.start();
+      // demo energy: talk 3 s, pause 2 s
+      if (!q.has('energy')) setInterval(() => { const on = (performance.now() / 1000) % 5 < 3; r.setEnergy(on ? 1 : 0.15); document.getElementById('en').textContent = on ? 'speech' : 'pause'; }, 100);
+      setInterval(() => { document.getElementById('fps').textContent = r.fps().toFixed(0); }, 500);
+    }
+  </script>
+</body>
+</html>
