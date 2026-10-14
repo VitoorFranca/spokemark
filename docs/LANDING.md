@@ -1,10 +1,11 @@
 # Landing page
 
-`site/` is the project's landing page: static HTML + CSS, an inline script and a WebGL module (`js/ribbon.js`), with no build step. `site/dev/ribbon/` renders the ribbon on its own. It loads no third-party scripts, sets no cookies and has no analytics; the fonts are self-hosted. `.github/workflows/pages.yml` publishes it to GitHub Pages on every push to `main` that touches `site/`.
+`site/` is the project's landing page: static HTML + CSS and one small script (`js/page.js`), with no build step. It loads no third-party scripts, sets no cookies and has no analytics; the fonts are self-hosted. `.github/workflows/pages.yml` publishes it to GitHub Pages on every push to `main` that touches `site/`.
 
 Preview locally: `cd site && python3 -m http.server 8765` → http://localhost:8765.
 
-- **Current design (v2): diagnosis of v1, direction, ribbon shader, verification:** [`landing/V2.md`](landing/V2.md)
+- **Current design (v3):** [`landing/V3.md`](landing/V3.md)
+- **v2 (superseded): diagnosis of v1, ribbon shader:** [`landing/V2.md`](landing/V2.md)
 - **Previous direction (v1, superseded):** [`landing/DIRECTION.md`](landing/DIRECTION.md)
 - **Every claim and its source:** [`landing/CLAIMS.md`](landing/CLAIMS.md)
 - **Before/after screenshots:** `landing/screenshots/{before,after}/` (375, 768, 1280, 1920 px)

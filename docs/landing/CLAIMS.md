@@ -1,6 +1,6 @@
 # Claims on the landing page → source
 
-Every product statement on `site/index.html` must appear here with the file (and line) that backs it. If a claim has no source, it doesn't go on the page. This version covers the v2 page (branch `landing-v2`, 2026-10-12).
+Every product statement on `site/index.html` must appear here with the file (and line) that backs it. If a claim has no source, it doesn't go on the page. This version covers the v3 page (branch `landing-v3`, 2026-10-13).
 
 Abbreviations: **R** = `README.md`, **RES** = `docs/RESULTS.md`, **DEC** = `docs/DECISIONS.md`, **DSN** = `docs/DESIGN.md`, **ST** = `src/shared/settings.ts`, **MM** = `src/main/models/ModelManager.ts`.
 
@@ -19,6 +19,26 @@ Abbreviations: **R** = `README.md`, **RES** = `docs/RESULTS.md`, **DEC** = `docs
 | Caption text and timing | `docs/landing/demo-jfk.log`: a real run of `dist/cli/transcribe.js` on `tests/e2e/fixtures/jfk.wav`, base.en, WER 0 % |
 | `jfk.wav` is public domain | RES:5 |
 | Caption look: black at 60 %, 14 px radius, SF 500, 1.35 line height, 2 lines, provisional at 55 % | `src/shared/captionStyle.ts:8,21,40–41`; `src/renderer/shared/CaptionBox.tsx:14,103`; ST:31 |
+
+## v3 additions
+
+| Claim | Source |
+|---|---|
+| Wordmark "Spokemark"; "Live captions for everything your Mac plays. Calls, videos and podcasts, transcribed on your Mac's GPU. Free, open source, 100% on-device." | R:7–8; DEC:36–38; `LICENSE` |
+| Panel card: an HTML replica of the menu bar panel (Overlay, Translation, Model "Standard", Caption size, "Everything is processed on this Mac", ⌥⌘C) | `docs/screenshots/panel-listening-*.png`; ST:21; `src/shared/i18n.ts:209` |
+| Panel transcript lines, timestamps and "provisional" tag | `docs/landing/demo-jfk.log` (times are relative to the first update at 5.8 s minus 0.5 s lead) |
+| Panel waveform and line waves | decorative, driven by the demo's speech/pause steps; they show no measured value |
+| Stat cards "0.45 s speech → screen, median, MacBook Air M4" and "0 words in long silences, 621 s tested" | RES:45, RES:47 |
+| "No bot joins your call, nothing to install in Zoom or Meet, no account" | R:32 (captures the system output), R:8 |
+| Numbers 0.45 s / 2.3 % / 0 / 179 ms | RES:45, RES:46, RES:47, RES:25 |
+| Card "Translate on-device" text, English and Spanish | `docs/screenshots/overlay-translation-1.png` (real overlay output) |
+| Card "Captions over everything" text "Ask what you can do for your country" | `demo-jfk.log` |
+| Orbit hypotheses and their offsets (+0.0, +0.6, +1.1, +5.0, +6.6 s) | `demo-jfk.log` lines at 5.8, 6.4, 6.9, 10.8 and 12.4 s |
+| "Every word, on screen. All of it on your Mac." | DEC:36–38, DEC:80 (recognition and translation local) |
+| Privacy: never recorded; 30 days or never; one network request | R:33; ST:45–46; MM:92 |
+| Features 01–06 | R:31–39; ST:21–23 (shortcuts); DEC:72–76 (speaker changes) |
+| "Works with anything that makes a sound" + pipeline chips | R:32; RES:16, RES:47, RES:25, RES:27, RES:45 |
+| Use-case strip (Calls, Videos, Podcasts, Lectures, Livestreams, Anything else) | R:32 (any audio the Mac plays). Calls are **not tested** (RES:131), and the Install column says so. |
 
 ## How it works
 
@@ -91,7 +111,7 @@ Abbreviations: **R** = `README.md`, **RES** = `docs/RESULTS.md`, **DEC** = `docs
 
 | Token | Ratio |
 |---|---|
-| ink `#F5F7FB` | 19.6 |
+| (v2 tokens, dark) ink `#F5F7FB` | 19.6 |
 | ink-2 `#9BA3B4` | 8.3 |
 | ink-3 `#7C8498` (small meta text) | 5.6 |
 | accent `#7AA7FF` | 8.8 |
@@ -108,3 +128,16 @@ From v1:
 
 From the v2 drafts:
 - A headline option "Nothing leaves the device." It overclaims, because the model download is a network request.
+
+### v3 tokens (light sheet)
+
+| Pair | Ratio |
+|---|---|
+| ink `#0E1020` on white | 18.9 |
+| ink-2 `#555A6E` on white | 6.8 |
+| ink-3 `#6B7084` on white | 4.9 |
+| accent `#1658FA` on `#E8EEFF` (tags, search highlight) | 4.75 |
+| white on ink pill | 18.9 |
+| scope labels `#8A91B3` on navy `#0B0E22` | 6.2 |
+
+Removed in v3: "Every byte, on your Mac" (overclaims: the model download is network traffic).
