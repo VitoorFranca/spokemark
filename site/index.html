@@ -6,12 +6,12 @@
   <title>Spokemark — live captions for your Mac, 100% on-device</title>
   <meta name="description" content="Free, open-source live captions for macOS. Spokemark captions calls, videos and podcasts with a Whisper model running on your Mac's GPU. The audio never leaves your Mac.">
   <link rel="canonical" href="https://vitoorfranca.github.io/spokemark/">
-  <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#ECEDF1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#080808">
   <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="img/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="img/icon-180.png">
-  <link rel="preload" href="fonts/dm-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/manrope.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Spokemark">
@@ -21,7 +21,7 @@
   <meta property="og:image" content="https://vitoorfranca.github.io/spokemark/img/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Spokemark: Live captions for your Mac. 100% on-device. The Spokemark menu bar panel shows a live transcript of a public-domain speech.">
+  <meta property="og:image:alt" content="Spokemark: Live captions for your Mac. 100% on-device. Live captions for your Mac, over a landscape of glowing sound waves.">
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">
   {
@@ -44,228 +44,234 @@
   }
   </script>
 </head>
-<body id="top">
+<body>
 <a class="skip" href="#main">Skip to content</a>
-<div class="sheet">
 
-<header class="in nav">
-  <a class="brand" href="#top"><img src="img/icon-64.png" width="26" height="26" alt="">Spokemark</a>
-  <nav aria-label="Sections">
-    <ul class="links">
-      <li><a href="#features">Features</a></li>
-      <li><a href="#how">How it works</a></li>
-      <li><a href="#privacy">Privacy</a></li>
-      <li><a href="#open-source">Open source</a></li>
-    </ul>
-  </nav>
-  <a class="pill" href="#install">Download</a>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="img/icon-64.png" width="26" height="26" alt="">Spokemark</a>
+    <nav aria-label="Sections">
+      <ul class="links">
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+        <li><a href="#open-source">Open source</a></li>
+      </ul>
+    </nav>
+    <div class="right">
+      <a href="https://github.com/VitoorFranca/spokemark">GitHub</a>
+      <a class="btn" href="#install">Download<span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+    </div>
+  </div>
 </header>
 
 <main id="main">
-  <section class="hero" aria-labelledby="hero-h">
-    <div class="in tagline rise">
-      <p><strong>Live captions for everything your Mac plays.</strong> Calls, videos and podcasts, transcribed on your Mac's GPU. Free, open source, 100% on-device.</p>
-      <div class="ctas">
-        <a class="pill" href="https://github.com/VitoorFranca/spokemark/releases/download/v0.2.0/Spokemark-0.2.0-macos-arm64.dmg">Download for macOS <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8m0 0L4.5 7M8 10.5L11.5 7M3 13.5h10"/></svg></a>
-        <a class="link" href="https://github.com/VitoorFranca/spokemark">View on GitHub <span aria-hidden="true">→</span></a>
-      </div>
+  <section class="hero" id="top" aria-labelledby="hero-h">
+    <div class="still" aria-hidden="true"></div>
+    <div class="wrap hero-copy">
+      <a class="badge rise" href="https://github.com/VitoorFranca/spokemark"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>Open source · 100% on-device<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></a>
+      <h1 id="hero-h" class="rise d1">Live captions for everything your Mac plays</h1>
+      <p class="sub rise d2">Calls, videos and podcasts, captioned as they're spoken by a Whisper model running on your Mac's GPU. No cloud, no account, no bot in your meeting.</p>
+      <a class="btn lg rise d3" href="https://github.com/VitoorFranca/spokemark/releases/download/v0.2.0/Spokemark-0.2.0-macos-arm64.dmg">Download for macOS<span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      <p class="meta rise d3">Free · v0.2.0 · Apple silicon · macOS 14.2+ · English speech</p>
     </div>
-    <h1 id="hero-h" class="in wordmark rise d1"><span aria-hidden="true">Spokemark</span><span class="vh">Spokemark: live captions for your Mac, 100% on-device</span></h1>
+    <button class="ctrl" type="button" id="wpause" hidden>Pause animation</button>
+  </section>
 
-    <div class="stage" id="stage">
-      <div class="halo" aria-hidden="true"></div>
-      <canvas id="waves" aria-hidden="true"></canvas>
-
-      <div class="stat s-left rise d3" aria-hidden="true">
-        <p class="k">Speech → screen</p>
-        <p class="v">0.45<small>s</small></p>
-        <p class="bars" data-bars="18" data-hi="12"></p>
-        <p class="ok">✓ median, MacBook Air M4</p>
+  <section class="sec metrics" id="performance" aria-labelledby="m-h">
+    <div class="wrap">
+      <div class="top">
+        <h2 id="m-h">Measured on a MacBook Air M4, with real speech through the speakers</h2>
+        <div class="arrows"><button type="button" id="prev" aria-label="Previous metrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button><button type="button" id="next" aria-label="Next metrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
       </div>
+      <div class="track" id="track" tabindex="0" aria-label="Measured results">
+        <article class="card metric"><p>A word is on screen about half a second after it is spoken</p><div><b>0.45s<i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></i></b><small>Median, speech to screen</small></div></article>
+        <article class="card metric"><p>Errors per word over a 30-minute session of 2,750 words</p><div><b>2.3%<i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></i></b><small>Word error rate</small></div></article>
+        <article class="card metric"><p>Silence produces no text: 621 s of pauses in one session</p><div><b>0<i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></i></b><small>Words invented in silence</small></div></article>
+        <article class="card metric"><p>One pass of the model over a sliding window, on the GPU</p><div><b>179ms<i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></i></b><small>Inference, median</small></div></article>
+        <article class="card metric"><p>The system audio tap delivers sound to the app quickly</p><div><b>32ms<i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></i></b><small>Tap to app</small></div></article>
+        <article class="card metric"><p>Even the slow words arrive within about a second and a half</p><div><b>1.3s<i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></i></b><small>95th percentile, speech to screen</small></div></article>
+      </div>
+      <p class="src">Standard model (base.en). Methods, raw numbers and what isn't verified yet: <a href="https://github.com/VitoorFranca/spokemark/blob/main/docs/RESULTS.md">RESULTS.md</a></p>
+    </div>
+  </section>
 
-      <div class="panel rise d2">
-        <div class="p-head"><img src="img/icon-64.png" width="28" height="28" alt=""><div><b>Spokemark</b><small>Listening</small></div><span class="dots" aria-hidden="true">•••</span></div>
-        <div class="scope"><canvas id="scope"></canvas><p class="t"><span>jfk.wav</span><span id="clock">00:00</span></p><p class="tag" id="tag">provisional</p></div>
-        <div class="lines" id="lines"><p class="ln"><time>00:00</time><span>And so my fellow Americans!</span></p><p class="ln"><time>00:03</time><span>Ask not!</span></p><p class="ln"><time>00:05</time><span>What your country can do for you? Ask what you can do for your country</span></p></div>
-        <div class="ctl">
-          <div><span>Overlay</span><span class="tg on"></span></div>
-          <div><span>Translation</span><span class="tg"></span></div>
-          <div><span>Model</span><span class="sel">Standard</span></div>
-          <div><span>Caption size</span><span class="sz"><i>A</i><i>A</i><i>A</i><i>A</i></span></div>
+  <section class="sec how" id="how" aria-labelledby="how-h">
+    <div class="wrap">
+      <div class="head">
+        <span class="chip">How it works</span>
+        <div class="tabs"><div class="tablist" role="tablist" aria-label="Pipeline steps">
+          <button type="button" role="tab" aria-selected="true" data-step="0">Capture</button>
+          <button type="button" role="tab" aria-selected="false" data-step="1">Detect</button>
+          <button type="button" role="tab" aria-selected="false" data-step="2">Recognize</button>
+          <button type="button" role="tab" aria-selected="false" data-step="3">Confirm</button>
+          </div><button type="button" class="pp" id="tpause" aria-label="Pause the demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
         </div>
-        <div class="p-foot"><span>Everything is processed on this Mac · ⌥⌘C</span><button type="button" id="pause" hidden>Pause</button></div>
+        <h2 id="how-h">From a Zoom call to a YouTube video, Spokemark captions what your Mac plays, on your Mac.</h2>
       </div>
+      <div class="stagewin">
+        <div class="still2" aria-hidden="true"></div>
+        <canvas id="w2" aria-hidden="true"></canvas>
+        <div class="win" aria-label="Spokemark replaying its real output on jfk.wav, a public-domain recording">
+          <aside class="side" aria-hidden="true">
+            <div class="lights"><i></i><i></i><i></i></div>
+            <div class="search">Search history</div>
+            <p class="grp">Captions</p>
+            <div class="it on"><i style="background:#22C55E"></i>Live</div>
+            <div class="it"><i style="background:#71717A"></i>History</div>
+            <p class="grp">Models</p>
+            <div class="it"><i style="background:#3B6CF6"></i>Standard</div>
+            <div class="it"><i style="background:#8B5CF6"></i>Enhanced</div>
+            <div class="it"><i style="background:#F2541B"></i>Speakers</div>
+          </aside>
+          <div class="main">
+            <div class="bar"><span class="tag">LIVE</span><span>jfk.wav · public domain</span><span class="st" id="wst">Listening</span><span class="rs" aria-hidden="true">Stop</span></div>
+            <div class="body">
+              <div class="steps" aria-hidden="true">
+                <p class="h">On-device pipeline <span id="wct">0 of 4</span></p>
+                <p class="step" data-s="0"><i></i>System audio tap (CoreAudio)<em>~32 ms</em></p>
+                <p class="step" data-s="1"><i></i>Voice detection (Silero VAD)<em>speech</em></p>
+                <p class="step" data-s="2"><i></i>Whisper base.en on Metal<em>179 ms</em></p>
+                <p class="step" data-s="3"><i></i>Two passes agree, word confirmed<em>~0.95 s</em></p>
+              </div>
+              <div class="transcript" id="lines"><p class="ln"><time>00:00</time><span>And so my fellow Americans!</span></p><p class="ln"><time>00:03</time><span>Ask not!</span></p><p class="ln"><time>00:05</time><span>What your country can do for you? Ask what you can do for your country</span></p></div>
+            </div>
+            <div class="foot2" aria-hidden="true"><img src="img/icon-64.png" width="22" height="22" alt=""><span class="input">Everything is processed on this Mac · ⌥⌘C</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Real output, replayed at its real timing: dim words are provisional and can still change (<a href="https://github.com/VitoorFranca/spokemark/blob/main/docs/landing/demo-jfk.log">log</a>).</p>
+    </div>
+  </section>
 
-      <div class="stat s-right rise d3" aria-hidden="true">
-        <p class="k">In long silences</p>
-        <p class="v">0<small>words</small></p>
-        <p class="bars" data-bars="18" data-hi="0"></p>
-        <p class="ok">✓ 621 s tested</p>
+  <section class="sec" id="features" aria-labelledby="why-h">
+    <div class="wrap">
+      <div class="lefthead">
+        <span class="chip">Why Spokemark?</span>
+        <h2 id="why-h">Built for reading. Captions that keep up with the voice.</h2>
+        <p>Spokemark sits in your menu bar and puts a clean caption over whatever is on screen, with a transcript you can search later.</p>
+      </div>
+      <div class="why">
+        <div class="feats" id="feats">
+          <div class="feat"><button type="button" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/></svg>Any app that makes a sound</button><p>A CoreAudio process tap hears the Mac's output, so there's nothing to install in Zoom or Meet and playback stays audible.</p></div>
+          <div class="feat on"><button type="button" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Captions over everything</button><p>An overlay above full-screen apps and every Space. Standard, High contrast and Cinema presets; 2–3 lines, top or bottom.</p></div>
+          <div class="feat"><button type="button" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Searchable history</button><p>Every session as text, never audio. Full-text search and export to .txt, .srt or .md. Deleted after 30 days by default.</p></div>
+          <div class="feat"><button type="button" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>Live translation</button><p>The translation under the original, or alone, by Apple's on-device Translation framework. Needs macOS 26.</p></div>
+          <div class="feat"><button type="button" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg>Speaker changes</button><p>Experimental: with the Enhanced · speakers model a new line starts when someone else talks. It doesn't say who.</p></div>
+        </div>
+        <div class="flowcard">
+          <div class="still2" aria-hidden="true"></div>
+          <canvas id="w3" aria-hidden="true"></canvas>
+          <div class="rows">
+            <p class="row"><span class="k t">TRIGGER</span>Sound plays on your Mac<em>⌥⌘C</em></p>
+            <p class="row"><span class="k">STEP</span><span class="o"></span>Detect speech<em>VAD</em></p>
+            <p class="row"><span class="k">STEP</span><span class="o"></span>Transcribe on the GPU<em>Metal</em></p>
+            <p class="row"><span class="k">STEP</span><span class="o"></span>Confirm when two passes agree<em>LA-2</em></p>
+            <p class="row last"><span class="k">OUTPUT</span><span>A caption over every app, a searchable transcript, and an optional on-device translation.</span><span class="bolt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span></p>
+          </div>
+        </div>
       </div>
     </div>
-    <p class="in marks" aria-hidden="true"><span><b>01</b> System audio · any app</span><span><b>02</b> Spokemark caption</span></p>
-    <p class="in vh">The panel replays real output: Spokemark captioning jfk.wav, a public-domain recording, at its real timing. Raw log: docs/landing/demo-jfk.log in the repository.</p>
   </section>
 
-  <section class="in statement reveal" aria-label="What Spokemark does">
-    <p class="who"><b>What it does</b><span>in one sentence</span></p>
-    <div>
-      <p class="big">Spokemark listens to your Mac's sound output and writes what's said on screen as it's said, <em>with a Whisper model on your GPU, not a server.</em></p>
-      <p class="fine">No bot joins your call, nothing to install in Zoom or Meet, and no account. The panel above replays the real output of one run on <cite>jfk.wav</cite>, a public-domain recording, at its real timing (<a href="https://github.com/VitoorFranca/spokemark/blob/main/docs/landing/demo-jfk.log">log</a>).</p>
+  <section class="sec" id="open-source" aria-labelledby="oss-h">
+    <div class="wrap">
+      <div class="head">
+        <span class="chip">Open source</span>
+        <h2 id="oss-h">Built in the open</h2>
+        <p>No paid tier and no telemetry to trust. The app, the audio helper and the speech engine are all in one MIT repository you can read and build.</p>
+      </div>
+      <div class="three">
+        <article class="card"><h3><span class="sq" style="background:#22C55E">M</span>MIT License</h3><p>Use it, change it, ship it, sell it. The Spokemark name and logo stay with the project, so forks pick their own.</p><a class="ghost" href="https://github.com/VitoorFranca/spokemark/blob/main/LICENSE">Read license<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a></article>
+        <article class="card"><h3><span class="sq" style="background:#3B6CF6">R</span>Measured results</h3><p>Every number on this page comes from a documented run on real hardware, with what hasn't been verified listed too.</p><a class="ghost" href="https://github.com/VitoorFranca/spokemark/blob/main/docs/RESULTS.md">See results<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a></article>
+        <article class="card" id="build"><h3><span class="sq" style="background:#8B5CF6">B</span>Build from source</h3><p>Clone, <code>npm install</code>, build the Swift and C++ helpers, download the model, package. Pull requests welcome.</p><a class="ghost" href="https://github.com/VitoorFranca/spokemark/blob/main/CONTRIBUTING.md">Contribute<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a></article>
+      </div>
     </div>
   </section>
 
-  <section class="in numbers reveal" id="performance" aria-labelledby="num-h">
-    <h2 id="num-h" class="eyebrow">Measured on a MacBook Air M4</h2>
-    <dl class="nums">
-      <div><dt>Speech to screen, median</dt><dd>0.45<small>s</small></dd><p class="bars" data-bars="34" data-hi="9" aria-hidden="true"></p></div>
-      <div><dt>Word error rate, 2,750 words</dt><dd>2.3<small>%</small></dd><p class="bars" data-bars="28" data-hi="6" aria-hidden="true"></p></div>
-      <div><dt>Words invented in 621 s of silence</dt><dd>0</dd><p class="bars" data-bars="28" data-hi="0" aria-hidden="true"></p></div>
-      <div><dt>Per pass on the GPU, median</dt><dd>179<small>ms</small></dd><p class="bars" data-bars="28" data-hi="7" aria-hidden="true"></p></div>
-    </dl>
-    <p class="ctx">Standard model (base.en), real speech played through the speakers, 30-minute session. Methods, raw numbers and what isn't verified yet: <a href="https://github.com/VitoorFranca/spokemark/blob/main/docs/RESULTS.md">RESULTS.md</a>.</p>
-  </section>
-
-  <section class="in cards reveal" aria-label="Highlights">
-    <article class="card">
-      <h3>Captions over everything</h3>
-      <div class="ui" aria-hidden="true"><div class="screen"><span class="chip">Overlay</span><div class="ov">Ask what you can do <span class="p">for your country</span></div></div></div>
-      <p>An overlay above every app and Space. Clicks pass through it; drag and resize it in edit mode.</p>
-      <a class="link" href="#features">See all features <span aria-hidden="true">→</span></a>
-    </article>
-    <article class="card">
-      <h3>Search every word</h3>
-      <div class="ui" aria-hidden="true"><div class="doc"><p class="q">country</p><p class="hit"><time>00:00:00</time><span>And so my fellow Americans! Ask not! What your <mark>country</mark> can do for you?</span></p><p class="exp"><span>.txt</span><span>.srt</span><span>.md</span></p></div></div>
-      <p>Every session is kept as text, never audio. Full-text search across sessions; export to .txt, .srt or .md.</p>
-      <a class="link" href="#features">See all features <span aria-hidden="true">→</span></a>
-    </article>
-    <article class="card">
-      <h3>Translate on-device</h3>
-      <div class="ui" aria-hidden="true"><div class="screen"><span class="badge">macOS 26</span><div class="tr"><div class="ov">planning meeting. Today we will review the progress on the mobile application,<small>Reunión de planificación. Hoy revisaremos el progreso en la aplicación móvil,</small></div></div></div></div>
-      <p>The translation under the original, or alone, by Apple's on-device Translation framework.</p>
-      <a class="link" href="#features">See all features <span aria-hidden="true">→</span></a>
-    </article>
-  </section>
-
-  <section class="orbit" aria-labelledby="orbit-h">
-    <div class="rings" aria-hidden="true"></div>
-    <div class="core reveal">
-      <h2 id="orbit-h">Every word, on screen.<span>All of it on your Mac.</span></h2>
-      <p class="note">Real hypotheses from the run above: crossed-out text was corrected before it was confirmed.</p>
-    </div>
-    <div class="float">
-      <p class="hyp h1"><time>+0.0 s</time><span><s>And so am I!</s></span></p>
-      <p class="hyp h2"><time>+0.6 s</time><span>And so <s>my fellow America</s></span></p>
-      <p class="hyp h3"><time>+1.1 s</time><span>And so my fellow Americans!</span></p>
-      <p class="hyp h4"><time>+5.0 s</time><span><s>Watch your country</s></span></p>
-      <p class="hyp h5"><time>+6.6 s</time><span>What your country can do for you?</span></p>
+  <section class="sec stack" id="privacy" aria-labelledby="stack-h">
+    <div class="wrap">
+      <div class="head">
+        <span class="chip">Apps &amp; Privacy</span>
+        <h2 id="stack-h">Works with anything your Mac plays</h2>
+        <p>Spokemark listens to the system output, not to a specific app. Recognition, translation and history all stay on your Mac; the only network request is the one-time model download.</p>
+        <a class="btn" href="https://github.com/VitoorFranca/spokemark/blob/main/docs/DECISIONS.md">How capture works<span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      </div>
+      <div class="stackcards">
+        <div class="card">
+          <div><h3>Calls, browsers, players and podcasts: if the Mac plays it, Spokemark can caption it</h3><a class="ghost" href="https://github.com/VitoorFranca/spokemark#features">See all features<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a></div>
+          <ul class="apps">
+            <li><span class="d" style="background:#2D8CFF" aria-hidden="true">Z</span>Zoom</li><li><span class="d" style="background:#00897B" aria-hidden="true">M</span>Google Meet</li><li><span class="d" style="background:#5B5FC7" aria-hidden="true">T</span>Microsoft Teams</li>
+            <li><span class="d" style="background:#5865F2" aria-hidden="true">D</span>Discord</li><li><span class="d" style="background:#E62117" aria-hidden="true">Y</span>YouTube</li><li><span class="d" style="background:#9933CC" aria-hidden="true">P</span>Podcasts</li>
+            <li><span class="d" style="background:#1E88E5" aria-hidden="true">S</span>Safari</li><li><span class="d" style="background:#34A853" aria-hidden="true">C</span>Chrome</li><li><span class="d" style="background:#52525B" aria-hidden="true">+</span>Any other app</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div><h3>Privacy built into how it works, not a setting you turn on</h3><a class="ghost" href="https://github.com/VitoorFranca/spokemark/blob/main/SECURITY.md">Security policy<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a></div>
+          <ul class="pills">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg>No account</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>No telemetry</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 4v5h8V4M8 20v-6h8v6"/></svg>Audio never saved</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>On-GPU recognition</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>On-device translation</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Text-only history</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>30-day retention</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3"/></svg>SHA-256 model check</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 8-4 4 4 4M16 8l4 4-4 4"/></svg>Open source, MIT</li>
+          </ul>
+        </div>
+      </div>
+      <p class="note">Calls haven't been tested end to end yet; YouTube in Chrome and local playback have.</p>
     </div>
   </section>
 
-  <section class="in about reveal" id="privacy" aria-labelledby="privacy-h">
-    <p class="eyebrow">Privacy</p>
-    <h2 id="privacy-h">Your audio never leaves your Mac. Recognition runs on the GPU, and transcripts stay as text in your Library.</h2>
-    <div class="facts3">
-      <p><b>Never recorded</b><span>Audio goes from the tap to the speech engine in memory and is discarded.</span></p>
-      <p><b>Kept 30 days, or never</b><span>History is text only. Delete a range, change the period, or turn it off.</span></p>
-      <p><b>One network request</b><span>The one-time model download from Hugging Face, checked by SHA-256.</span></p>
-    </div>
-    <div class="more">
-      <p>Check it while captions run. In our test, with captions and translation on, this printed nothing:</p>
-      <p><code>lsof -nP -i -a -p "$(pgrep -d, -f Spokemark.app)"</code></p>
-      <a class="pill" href="https://github.com/VitoorFranca/spokemark">Read the code</a>
-    </div>
-  </section>
-
-  <section class="in toolkit reveal" id="features" aria-labelledby="features-h">
-    <div class="tk-head"><p class="eyebrow">Toolkit</p><h2 id="features-h">Features<sup>(06)</sup></h2></div>
-    <div class="acc">
-      <details open name="f"><summary><span class="n">01</span><span>Captions over everything</span><span class="pm" aria-hidden="true"></span></summary>
-        <div class="body"><div class="c"><div class="thumb"><img src="img/settings-captions-light-440.webp" srcset="img/settings-captions-light-440.webp 440w, img/settings-captions-light-880.webp 880w" sizes="220px" width="440" height="340" loading="lazy" alt="Spokemark caption settings with a live preview and the Standard, High contrast and Cinema presets."></div><p>An overlay that stays above full-screen apps and on every Space. Standard, High contrast and Cinema presets; font, size, background, 2–3 lines, top or bottom, with a live preview.</p></div></div></details>
-      <details name="f"><summary><span class="n">02</span><span>Searchable history and export</span><span class="pm" aria-hidden="true"></span></summary>
-        <div class="body"><div class="c"><div class="thumb"><img src="img/main-history-search-light-440.webp" srcset="img/main-history-search-light-440.webp 440w, img/main-history-search-light-880.webp 880w" sizes="220px" width="440" height="171" loading="lazy" alt="Spokemark History window searching for the word country, with Export buttons for .txt, .srt and .md."></div><p>Every session as text with timestamps, full-text search across sessions, export to .txt, .srt or .md. Deleted after 30 days by default, or turned off.</p></div></div></details>
-      <details name="f"><summary><span class="n">03</span><span>From the menu bar</span><span class="pm" aria-hidden="true"></span></summary>
-        <div class="body"><div class="c"><div class="thumb"><img src="img/panel-idle-light-440.webp" srcset="img/panel-idle-light-440.webp 440w, img/panel-idle-light-880.webp 880w" sizes="220px" width="440" height="636" loading="lazy" alt="The Spokemark menu bar panel with a Start Captions button, overlay and translation switches, the model menu and caption size."></div><p>Start, stop and fix problems from a panel in the menu bar, or from anywhere: ⌥⌘C starts or stops, ⌥⌘O shows or hides the caption, ⌥⌘E moves it. All shortcuts are configurable.</p></div></div></details>
-      <details name="f"><summary><span class="n">04</span><span>Live translation <span class="tagx">macOS 26</span></span><span class="pm" aria-hidden="true"></span></summary>
-        <div class="body"><div class="c text"><p>Show the translation under the original caption, or only the translation, by Apple's on-device Translation framework, into the languages installed in System Settings.</p></div></div></details>
-      <details name="f"><summary><span class="n">05</span><span>Knows what's playing</span><span class="pm" aria-hidden="true"></span></summary>
-        <div class="body"><div class="c text"><p>The caption shows the icon and name of the app the audio comes from, with soft waves that follow the voice and stay still in silence.</p></div></div></details>
-      <details name="f"><summary><span class="n">06</span><span>Speaker changes <span class="tagx">experimental</span></span><span class="pm" aria-hidden="true"></span></summary>
-        <div class="body"><div class="c text"><p>With the Enhanced · speakers model, a new line starts when someone else starts talking. It marks the change; it doesn't say who.</p></div></div></details>
+  <section class="sec agent" aria-labelledby="agent-h">
+    <div class="wrap">
+      <div class="top">
+        <div class="lefthead">
+          <span class="chip">Menu bar first</span>
+          <h2 id="agent-h">A caption engine in your menu bar.</h2>
+          <p>Start and stop with one click or ⌥⌘C, see what's being captured, and fix problems like a missing permission or model right from the panel.</p>
+        </div>
+        <a class="ghost" href="https://github.com/VitoorFranca/spokemark#usage">Shortcuts<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+      </div>
+      <div class="card grid4">
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><b>Starts in one step</b><p>⌥⌘C starts or stops captions from anywhere; ⌥⌘O shows or hides them, ⌥⌘E moves them.</p></div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><b>Silent when nothing is said</b><p>A voice detector gates the model, so pauses stay empty: 0 words in 621 s of silence.</p></div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><b>Knows what's playing</b><p>The caption shows the icon and name of the app the audio comes from, with waves that follow the voice.</p></div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><b>Native on macOS</b><p>Light and dark mode, vibrancy, full keyboard navigation and VoiceOver labels; English and Portuguese UI.</p></div>
+      </div>
     </div>
   </section>
 
-  <section class="in works reveal" id="how" aria-labelledby="how-h">
-    <h2 id="how-h">Works with anything that makes a sound</h2>
-    <p>Spokemark captions the Mac's sound output, not a specific app. Here is what happens to it, measured:</p>
-    <ol class="pipe">
-      <li>Process tap<b>~32 ms</b></li>
-      <li>Silero VAD<b>0 words in silence</b></li>
-      <li>whisper.cpp + Metal<b>179 ms</b></li>
-      <li>Two passes agree<b>~0.95 s</b></li>
-      <li>Caption on screen<b>0.45 s</b></li>
-    </ol>
-    <div class="grid" aria-hidden="true">
-      <div class="tile edge"></div><div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5 21 7.5v9l-5.5-3"/></svg></div><div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg></div><div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M8.2 15.8a5.4 5.4 0 0 1 0-7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.4 18.6a9.3 9.3 0 0 1 0-13.2M18.6 5.4a9.3 9.3 0 0 1 0 13.2"/></svg></div><div class="tile edge"></div>
-      <div class="tile edge"></div><div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="m10 9 5 3-5 3z"/></svg></div><div class="tile hl"><img src="img/icon-180.png" width="44" height="44" alt=""></div><div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg></div><div class="tile edge"></div>
-      <div class="tile edge"></div><div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2.5 9 9.5-4.5L21.5 9 12 13.5z"/><path d="M6.5 11v4.5c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3V11"/></svg></div><div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v10H9l-5 4z"/></svg></div><div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="12.5" rx="2"/><path d="M8 21h8"/></svg></div><div class="tile edge"></div>
+  <section class="sec" id="install" aria-labelledby="ready-h">
+    <div class="wrap ready">
+      <div class="lefthead">
+        <h2 id="ready-h">Ready to read along?</h2>
+        <p>Download Spokemark, allow System Audio Recording, and play anything. The speech model downloads on first launch.</p>
+        <p id="faq">Builds aren't notarized yet (no Apple Developer ID). On macOS 15 or later: open it, click Done, then System Settings › Privacy &amp; Security › Open Anyway. On macOS 14: right-click › Open.</p>
+      </div>
+      <div class="fields">
+        <p class="field"><span>Version</span>0.2.0 · released 2026-10-12</p>
+        <p class="field"><span>Mac</span>Apple silicon (M1 or later)</p>
+        <p class="field"><span>macOS</span>14.2 or later · translation needs 26</p>
+        <div class="two"><p class="field">.dmg</p><p class="field"><span>Size</span>144 MB · model ~150 MB</p></div>
+        <p class="field"><span>Permission</span>System Audio Recording only</p>
+        <a class="btn" href="https://github.com/VitoorFranca/spokemark/releases/download/v0.2.0/Spokemark-0.2.0-macos-arm64.dmg">Download for macOS</a>
+        <p class="first">Captures what the Mac plays, not your microphone. Verify with <a href="https://github.com/VitoorFranca/spokemark/releases/download/v0.2.0/SHA256SUMS.txt">SHA256SUMS.txt</a> · <a href="https://github.com/VitoorFranca/spokemark/releases">all releases</a></p>
+      </div>
     </div>
-    <a class="pill" href="https://github.com/VitoorFranca/spokemark/blob/main/docs/DECISIONS.md">Read the technical decisions</a>
   </section>
 </main>
 
-<div class="night">
-  <section class="in close" id="open-source" aria-labelledby="close-h">
-    <div>
-      <h2 id="close-h">Every word your Mac plays, readable. Free and open source.</h2>
-      <div class="row">
-        <p>MIT-licensed: read it, fork it, ship it. No account, no trial, no paid tier.</p>
-        <span class="eq" aria-hidden="true"><i style="height:40%"></i><i style="height:80%"></i><i style="height:55%"></i><i style="height:100%"></i><i style="height:65%"></i></span>
-        <a class="pill accent" href="https://github.com/VitoorFranca/spokemark/releases/download/v0.2.0/Spokemark-0.2.0-macos-arm64.dmg">Download for macOS</a>
-      </div>
+<footer class="foot">
+  <div class="wrap">
+    <div class="about">
+      <a class="brand" href="#top"><img src="img/icon-64.png" width="26" height="26" alt="">Spokemark</a>
+      <p>Free, open-source live captions for macOS. Everything your Mac plays, transcribed on your Mac.</p>
+      <div class="soc"><a href="https://github.com/VitoorFranca/spokemark" aria-label="Spokemark on GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a><a href="https://github.com/VitoorFranca/spokemark/releases" aria-label="Releases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg></a></div>
     </div>
-    <div class="art" aria-hidden="true"><img src="img/icon-400.webp" width="400" height="400" alt=""></div>
-  </section>
-  <ul class="kinds" aria-label="Things people caption">
-    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5 21 7.5v9l-5.5-3"/></svg>Calls</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="m10 9 5 3-5 3z"/></svg>Videos</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M8.2 15.8a5.4 5.4 0 0 1 0-7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.4 18.6a9.3 9.3 0 0 1 0-13.2M18.6 5.4a9.3 9.3 0 0 1 0 13.2"/></svg>Podcasts</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2.5 9 9.5-4.5L21.5 9 12 13.5z"/><path d="M6.5 11v4.5c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3V11"/></svg>Lectures</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="12.5" rx="2"/><path d="M8 21h8"/></svg>Livestreams</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/></svg>Anything else</li>
-  </ul>
-  <section class="in install" id="install" aria-labelledby="install-h">
-    <div>
-      <h3 id="install-h">Requirements</h3>
-      <dl>
-        <div><dt>Version</dt><dd>0.2.0 · .dmg, 144 MB · 2026-10-12</dd></div>
-        <div><dt>Mac</dt><dd>Apple silicon (M1 or later)</dd></div>
-        <div><dt>macOS</dt><dd>14.2 or later; translation needs 26</dd></div>
-        <div><dt>Permission</dt><dd>System Audio Recording only</dd></div>
-        <div><dt>Speech</dt><dd>English</dd></div>
-      </dl>
-    </div>
-    <div id="faq">
-      <h3>First launch</h3>
-      <p>Builds aren't notarized yet (no Apple Developer ID). On macOS 15 or later: open it, click Done, then System Settings › Privacy &amp; Security › Open Anyway. On macOS 14: right-click › Open.</p>
-      <p>Not tested in a real call yet. It captions what the Mac plays, not your microphone. Verify with <a href="https://github.com/VitoorFranca/spokemark/releases/download/v0.2.0/SHA256SUMS.txt">SHA256SUMS.txt</a>.</p>
-    </div>
-    <div id="build">
-      <h3>Build from source</h3>
-<pre><code>git clone https://github.com/VitoorFranca/spokemark.git
-cd spokemark
-brew install cmake && npm install
-npm run build:native && npm run models
-npm run package</code></pre>
-    </div>
-  </section>
-  <div class="giant" aria-hidden="true"><p>spokemark</p></div>
-  <footer class="in foot">
-    <nav aria-label="Footer"><ul>
-      <li><a href="https://github.com/VitoorFranca/spokemark">GitHub</a></li><li><a href="https://github.com/VitoorFranca/spokemark/releases">Releases</a></li>
-      <li><a href="https://github.com/VitoorFranca/spokemark/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/VitoorFranca/spokemark/blob/main/CONTRIBUTING.md">Contribute</a></li>
-    </ul></nav>
-    <p>Built with whisper.cpp, Silero VAD, Electron and React. This page sets no cookies and loads nothing from other sites.</p>
-    <p class="legal"><a href="https://github.com/VitoorFranca/spokemark/blob/main/LICENSE">MIT License</a><a href="https://github.com/VitoorFranca/spokemark/blob/main/TRADEMARKS.md">Brand policy</a><a href="https://github.com/VitoorFranca/spokemark/blob/main/SECURITY.md">Security</a></p>
-    <p class="copy">© 2026 Spokemark</p>
-  </footer>
-</div>
-</div>
-<script src="js/page.js" defer></script>
+    <div><h3>Product</h3><ul><li><a href="#how">How it works</a></li><li><a href="#features">Features</a></li><li><a href="#performance">Performance</a></li><li><a href="#install">Download</a></li></ul></div>
+    <div><h3>Use cases</h3><ul><li><a href="#privacy">Calls</a></li><li><a href="#privacy">Videos</a></li><li><a href="#privacy">Podcasts</a></li><li><a href="#privacy">Lectures</a></li></ul></div>
+    <div><h3>Open source</h3><ul><li><a href="https://github.com/VitoorFranca/spokemark">Repository</a></li><li><a href="https://github.com/VitoorFranca/spokemark/blob/main/CONTRIBUTING.md">Contributing</a></li><li><a href="https://github.com/VitoorFranca/spokemark/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/VitoorFranca/spokemark/issues">Issues</a></li></ul></div>
+    <div><h3>Project</h3><ul><li><a href="https://github.com/VitoorFranca/spokemark/blob/main/docs/DECISIONS.md">Decisions</a></li><li><a href="https://github.com/VitoorFranca/spokemark/blob/main/docs/RESULTS.md">Results</a></li><li><a href="https://github.com/VitoorFranca/spokemark/blob/main/SECURITY.md">Security</a></li><li><a href="https://github.com/VitoorFranca/spokemark/blob/main/TRADEMARKS.md">Brand policy</a></li></ul></div>
+    <p class="legal"><span>MIT License · built with whisper.cpp, Silero VAD, Electron and React</span><span>This page sets no cookies and loads nothing from other sites.</span></p>
+  </div>
+</footer>
+<script type="module" src="js/page.js"></script>
 </body>
 </html>

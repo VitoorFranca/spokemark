@@ -1,6 +1,6 @@
 # Claims on the landing page → source
 
-Every product statement on `site/index.html` must appear here with the file (and line) that backs it. If a claim has no source, it doesn't go on the page. This version covers the v3 page (branch `landing-v3`, 2026-10-13).
+Every product statement on `site/index.html` must appear here with the file (and line) that backs it. If a claim has no source, it doesn't go on the page. This version covers the v4 page (branch `landing-v4`, 2026-10-13); v3 rows below still apply where the same copy is reused.
 
 Abbreviations: **R** = `README.md`, **RES** = `docs/RESULTS.md`, **DEC** = `docs/DECISIONS.md`, **DSN** = `docs/DESIGN.md`, **ST** = `src/shared/settings.ts`, **MM** = `src/main/models/ModelManager.ts`.
 
@@ -19,6 +19,33 @@ Abbreviations: **R** = `README.md`, **RES** = `docs/RESULTS.md`, **DEC** = `docs
 | Caption text and timing | `docs/landing/demo-jfk.log`: a real run of `dist/cli/transcribe.js` on `tests/e2e/fixtures/jfk.wav`, base.en, WER 0 % |
 | `jfk.wav` is public domain | RES:5 |
 | Caption look: black at 60 %, 14 px radius, SF 500, 1.35 line height, 2 lines, provisional at 55 % | `src/shared/captionStyle.ts:8,21,40–41`; `src/renderer/shared/CaptionBox.tsx:14,103`; ST:31 |
+
+## v4 additions
+
+| Claim | Source |
+|---|---|
+| "Live captions for everything your Mac plays"; "captioned as they're spoken by a Whisper model running on your Mac's GPU. No cloud, no account, no bot in your meeting." | R:7–8, R:32–33; DEC:36–38 |
+| Metric cards: 0.45 s, 2.3 % (2,750 words), 0 words in 621 s, 179 ms, 32 ms, 1.3 s p95 | RES:45, RES:46, RES:47, RES:25, RES:16, RES:45 |
+| Window mock: pipeline steps (tap ~32 ms, Silero VAD, base.en on Metal 179 ms, agreement ~0.95 s) and transcript | RES:16, DEC:44, RES:25, RES:27; `demo-jfk.log` |
+| Sidebar models Standard / Enhanced / Speakers | `src/shared/i18n.ts:209–213` |
+| Why list (any app, overlay, history, translation macOS 26, speaker changes experimental) | R:31–39 |
+| Flow card TRIGGER/STEP/OUTPUT (⌥⌘C, VAD, Metal, LocalAgreement-2) | ST:21; DEC:44, DEC:36, DEC:56 |
+| "Built in the open": MIT, measured results, build from source | `LICENSE`, `TRADEMARKS.md`; RES; R:117–123 |
+| Apps list (Zoom, Meet, Teams, Discord, YouTube, Podcasts, Safari, Chrome, any other app) | R:32 lists Meet, Zoom, Teams, Discord, YouTube and podcasts; browsers are where those play. Calls **not tested** (RES:131), stated under the cards; YouTube in Chrome and local playback tested (RES:11–12). |
+| Privacy pills: no account, no telemetry, audio never saved, on-GPU recognition, on-device translation, text-only history, 30-day retention, SHA-256 model check, MIT | R:8, R:33–34; MM:92–114 (only network call); ST:45–46; DEC:80 |
+| Menu bar 2×2: shortcuts ⌥⌘C/⌥⌘O/⌥⌘E; 0 words in 621 s; source app icon and waves; light/dark, vibrancy, keyboard, VoiceOver, English and Portuguese | ST:21–23; RES:47; R:38, R:40 |
+| Requirements block: 0.2.0, 2026-10-12, Apple silicon, macOS 14.2+ (translation 26), .dmg 144 MB, model ~150 MB, System Audio Recording only | release assets; R:55–57, R:69 |
+| First launch (macOS 15+: Open Anyway; 14: right-click › Open) | R:62; Apple support article (see Install row above) |
+| Background waves | decorative WebGL; their amplitude follows the speech/pause steps of `demo-jfk.log`, no measured value |
+
+### v4 contrast additions
+
+| Pair | Ratio |
+|---|---|
+| White on tag orange `#C2410C` | 5.2 |
+| White on action blue `#3B6CF6` (90 %) | 4.9 |
+| ink-2 `#A1A1AA` on `#080808` | 8.1 |
+| ink-3 `#8B8B95` on `#080808` | 6.0 |
 
 ## v3 additions
 
