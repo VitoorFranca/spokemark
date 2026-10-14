@@ -14,7 +14,7 @@
   --line: #E6E7EE;
   --accent: #1658FA;          /* brand electric blue */
   --accent-2: #8EA9FF;        /* periwinkle: the brand blue toward ice, for large type on dark */
-  --glow: #DCE5FF;
+  --glow: #E8EEFF;
   --night: #0B0E22;           /* brand navy */
   --night-2: #151935;
   --sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -68,14 +68,14 @@ h2 { font-weight: 450; font-size: clamp(32px, 3.6vw, 52px); line-height: 1.05; l
 .tagline p { max-width: 30em; font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem); line-height: 1.45; color: var(--ink-2); }
 .tagline p strong { color: var(--ink); font-weight: 500; }
 .tagline .ctas { display: flex; align-items: center; gap: var(--s5); }
-.wordmark { margin-top: var(--s5); font-weight: 500; font-size: clamp(56px, 15.6vw, 222px); line-height: 0.82; letter-spacing: -0.045em; text-transform: uppercase; white-space: nowrap; color: var(--ink); }
+.wordmark { margin-top: var(--s5); font-weight: 500; font-size: clamp(56px, 17.6vw, 260px); line-height: 0.82; letter-spacing: -0.045em; text-transform: uppercase; white-space: nowrap; color: var(--ink); }
 .wordmark span[aria-hidden] { display: block; }
 .stage { position: relative; height: clamp(520px, 52vw, 640px); margin-top: calc(-1 * clamp(28px, 5vw, 80px)); }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .halo { position: absolute; left: 50%; top: 52%; width: min(900px, 90%); aspect-ratio: 1.6; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(22, 88, 250, .10), rgba(22, 88, 250, .04) 55%, transparent); pointer-events: none; }
 
 /* product card: an HTML replica of the Spokemark menu bar panel while listening */
-.panel { position: absolute; z-index: 3; left: 50%; top: 0; transform: translateX(-50%); width: min(400px, 100%); background: #fff; border-radius: 22px; box-shadow: var(--shadow-lg); padding: var(--s3); font-family: var(--caption); }
+.panel { position: absolute; z-index: 3; left: 50%; top: 0; translate: -50% 0; width: min(400px, 100%); background: #fff; border-radius: 22px; box-shadow: var(--shadow-lg); padding: var(--s3); font-family: var(--caption); }
 .p-head { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s2) var(--s3); }
 .p-head img { width: 28px; height: 28px; border-radius: 7px; }
 .p-head b { display: block; font-size: 0.875rem; font-weight: 600; }
@@ -84,7 +84,7 @@ h2 { font-weight: 450; font-size: clamp(32px, 3.6vw, 52px); line-height: 1.05; l
 .p-head .dots { margin-left: auto; color: var(--ink-3); letter-spacing: 2px; }
 .scope { position: relative; background: var(--night); border-radius: 14px; height: 132px; overflow: hidden; }
 .scope canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.scope .t { position: absolute; top: 8px; left: 12px; right: 12px; display: flex; justify-content: space-between; font: 500 10px/1 var(--mono); color: #6E7596; }
+.scope .t { position: absolute; top: 8px; left: 12px; right: 12px; display: flex; justify-content: space-between; font: 500 10px/1 var(--mono); color: #8A91B3; }
 .scope .tag { position: absolute; top: 26px; left: 50%; transform: translateX(-50%); font: 500 10px/1 var(--caption); color: #fff; background: rgba(22, 88, 250, .9); padding: 4px 8px; border-radius: 999px; }
 .lines { padding: var(--s3) var(--s2) var(--s2); min-height: 112px; display: grid; gap: 6px; align-content: start; }
 .ln { display: grid; grid-template-columns: 44px 1fr; gap: var(--s2); font-size: 0.875rem; line-height: 1.4; }
@@ -126,10 +126,14 @@ h2 { font-weight: 450; font-size: clamp(32px, 3.6vw, 52px); line-height: 1.05; l
 .marks span:last-child::after { display: none; }
 @media (max-width: 1080px) { .stat { display: none; } }
 @media (max-width: 600px) {
-  .tagline .ctas { width: 100%; justify-content: space-between; }
-  .stage { height: 640px; margin-top: var(--s5); }
-  .panel { width: 100%; }
-  .marks { flex-direction: column; gap: var(--s2); }
+  .tagline .ctas { width: 100%; flex-direction: column; align-items: stretch; gap: var(--s4); }
+  .tagline .ctas .pill { justify-content: center; }
+  .tagline .ctas .link { align-self: center; }
+  .stage { height: auto; margin-top: var(--s5); padding-bottom: var(--s6); }
+  .stage canvas { top: 30%; height: 50%; }
+  .panel { position: relative; left: auto; translate: none; width: 100%; }
+  .marks { display: none; }
+  .ui .tr .ov { font-size: 0.8125rem; }
 }
 
 /* statement */
@@ -173,7 +177,7 @@ h2 { font-weight: 450; font-size: clamp(32px, 3.6vw, 52px); line-height: 1.05; l
 .ui mark { background: var(--glow); color: var(--accent); border-radius: 3px; padding: 0 2px; }
 .ui .exp { margin-top: 10px; display: flex; gap: 6px; }
 .ui .exp span { font-size: 0.6875rem; border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; }
-.ui .tr { position: absolute; left: 8%; right: 8%; bottom: 12%; }
+.ui .tr { position: absolute; left: 8%; right: 8%; bottom: 12%; top: 44px; display: flex; align-items: end; }
 .ui .tr .ov { position: static; }
 .ui .tr .ov small { display: block; margin-top: 4px; font-size: 0.75rem; color: rgba(255, 255, 255, .68); font-weight: 500; }
 .ui .badge { position: absolute; right: 10px; top: 10px; background: #fff; border-radius: 999px; font-size: 0.6875rem; padding: 4px 9px; box-shadow: var(--shadow); color: var(--ink); }
