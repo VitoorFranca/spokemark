@@ -44,8 +44,8 @@ Abbreviations: **R** = `README.md`, **RES** = `docs/RESULTS.md`, **DEC** = `docs
 |---|---|
 | White on tag orange `#C2410C` | 5.2 |
 | White on action blue `#3B6CF6` (90 %) | 4.9 |
-| ink-2 `#A1A1AA` on `#080808` | 8.1 |
-| ink-3 `#8B8B95` on `#080808` | 6.0 |
+| ink-2 `#A1A1AA` on `#080808` | 7.8 |
+| ink-3 `#8B8B95` on `#080808` | 5.9 |
 
 ## v3 additions
 
