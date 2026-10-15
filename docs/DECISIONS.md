@@ -85,6 +85,19 @@ Each entry lists what was chosen, the alternatives that were discarded, and why.
 
 **Reference product:** these features were requested after a commercial app ("Subtitles Live"). Its source is published under the FSL-1.1 (no competing use), so nothing was copied or read from it; the implementation is independent.
 
+## Brand alignment (October 2026)
+
+**Chosen: one identity for the website and the app.**
+- Near-black warm surfaces, Manrope, pill buttons, ember for live states, and the website's sound-wave shader on selected app surfaces.
+- Dark is the default appearance, with Light and System in Settings.
+- Vibrancy was removed in favour of solid surfaces.
+
+**Discarded: keeping the navy and cyan vibrant UI.** It read as a different product next to the site.
+
+**Wave shader:**
+- A TypeScript copy of `site/js/waves.js` (`src/renderer/shared/waves.ts`), because the site has no build step; the two copies must change together.
+- The app copy adds a transparent mode (black becomes alpha) and a frame cap.
+
 ## App
 
 - **Overlay:** `BrowserWindow` with `type: 'panel'` (documented to "float on top of full-screened apps" and "appear on all spaces"), plus `setAlwaysOnTop(true, 'screen-saver')` and `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })`. Click-through: `setIgnoreMouseEvents(true)`.

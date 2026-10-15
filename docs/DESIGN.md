@@ -11,11 +11,12 @@ What was chosen, what was discarded, and why. Measurements: MacBook Air M4, macO
 
 ## Native feel
 
-- **Vibrancy:** `popover` (panel), `sidebar` (main window), `titlebar` (Settings toolbar). Content areas paint a solid `--bg`; surfaces on vibrancy use translucent glass (`--glass`) and a brand tint (`--chrome-tint`).
+- **Solid surfaces (since the brand alignment, October 2026):** every window paints `--bg` (`#080808` dark, `#F6F6F7` light), and the native `backgroundColor` matches, so there is no white flash. Sidebar and toolbar are `--surface` with a hairline border. Discarded: keeping macOS vibrancy. It made the app look like a different product from the website, and translucent surfaces made screenshots unpredictable.
 - **Traffic lights:** `titleBarStyle: 'hiddenInset'` with `trafficLightPosition` aligned to the content; toolbars and headers are `-webkit-app-region: drag`, their controls `no-drag`.
 - **Interface behavior:** no text selection in UI chrome (only transcripts are selectable), no hand cursor, focus ring for keyboard only. Programmatic focus uses `focusVisible: false`; each onboarding step heading receives focus for VoiceOver without a ring.
 - **Full app menu** with standard shortcuts: ⌘, (Settings), ⌘W, ⌘Q, ⌘F (history search), ⌘0 (main window).
-- **Theme:** Chromium's `prefers-color-scheme` does **not** follow `nativeTheme.themeSource` in these renderers (measured with Playwright: main reported `shouldUseDarkColors: true`, the renderer `matches: false`). The main process is the source of truth: it sends `dark` in the state, renderers apply `data-theme` on `<html>`, and the first frame is right because the preload reads the theme synchronously once.
+- **Appearance:** Settings › General offers Dark (default), Light or System, applied as `nativeTheme.themeSource`. Dark is the default because it is the brand's main look (website and app).
+- **Theme plumbing:** Chromium's `prefers-color-scheme` does **not** follow `nativeTheme.themeSource` in these renderers (measured with Playwright: main reported `shouldUseDarkColors: true`, the renderer `matches: false`). The main process is the source of truth: it sends `dark` in the state, renderers apply `data-theme` on `<html>`, and the first frame is right because the preload reads the theme synchronously once.
 
 ## Panel lifecycle
 
@@ -61,7 +62,8 @@ Behavior unchanged from the MVP (click-through, `type: 'panel'`, all Spaces, ful
 
 ## Identity
 
-Palette and icons derive from `assets/logo.png` — see [`BRAND.md`](BRAND.md).
-- Dark: navy surfaces with a cyan accent. Light: cool neutrals with electric blue.
-- Vibrancy stays (native behavior) with a brand tint. Discarded: replacing vibrancy with solid surfaces (loses the native feel).
-- The logo's glow appears only as a **static** shadow on the main button while listening. Discarded: an animated/pulsing glow (looping animation).
+The app follows the website's identity (v4): near-black warm surfaces, Manrope, pill buttons, ember for "live", and the sound-wave landscape. See [`BRAND.md`](BRAND.md) for the palette, components and wave rules.
+- Waves: the onboarding welcome, the panel header while listening, the empty Live view, the caption preview and About. They animate only with sound (or on the welcome screen), at 30 fps, and become still frames under Reduce Motion, software GL or a slow GPU.
+- Discarded: WebGL waves in the overlay. It already has 2D waves at +1.7 % of one core, recoloured to the same palette, and the overlay is on screen for hours.
+- Discarded: animated waves in the panel during silence. They cost +15 % of a GPU core at 60 fps and 2× DPR; see RESULTS.md.
+- Discarded (earlier): an animated or pulsing glow on the main button. The glow while listening is static (now ember).

@@ -8,9 +8,9 @@
 Calls, videos, podcasts — 100% on-device. No cloud, no account, no audio ever leaves your Mac.
 
 [![CI](https://github.com/VitoorFranca/spokemark/actions/workflows/ci.yml/badge.svg)](https://github.com/VitoorFranca/spokemark/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-1658FA.svg)](LICENSE)
-![Platform](https://img.shields.io/badge/macOS-14.2%2B%20·%20Apple%20Silicon-0A0F1F.svg)
-![Engine](https://img.shields.io/badge/engine-whisper.cpp%20%2B%20Metal-18D2FD.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-F2541B.svg)](LICENSE)
+![Platform](https://img.shields.io/badge/macOS-14.2%2B%20·%20Apple%20Silicon-111112.svg)
+![Engine](https://img.shields.io/badge/engine-whisper.cpp%20%2B%20Metal-52525B.svg)
 
 [Download](https://github.com/VitoorFranca/spokemark/releases) ·
 [Features](#features) ·
@@ -37,7 +37,7 @@ Calls, videos, podcasts — 100% on-device. No cloud, no account, no audio ever 
 - **Live translation.** Show the translation under the original caption (or only the translation), translated on-device with Apple's Translation framework — macOS 26 or later, using the languages installed in System Settings.
 - **Knows what's playing.** The overlay shows the icon and name of the app the audio comes from, with soft waves that follow the voice.
 - **Speaker changes (experimental).** The *Enhanced · speakers* model starts a new line when a different person starts talking.
-- **Native feel.** Light and dark mode, vibrancy, full keyboard navigation, VoiceOver labels, English and Brazilian Portuguese.
+- **Native feel.** Dark (default), light or system appearance, full keyboard navigation, VoiceOver labels, English and Brazilian Portuguese.
 
 > [!NOTE]
 > The included models recognize **English** speech. The interface is available in English and Portuguese (Brazil).

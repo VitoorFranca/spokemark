@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Changed
+- **New look, shared with the website.** Near-black warm surfaces, the Manrope typeface, pill buttons, ember for live states, and solid windows instead of translucent vibrancy.
+- **Sound waves.** The website's sound-wave landscape appears on the welcome screen, behind the panel header while listening (it follows the real audio level), in the empty Live view, behind the caption preview and in About. The overlay waves use the same palette.
+- **Appearance setting.** Settings › General › Appearance: Dark (new default), Light or System.
+
 ## [0.2.0] - 2026-10-12
 
 ### Added

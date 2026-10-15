@@ -122,6 +122,18 @@ Development build (same code as the package), isolated data dir, `ref1` played t
 | UI tests | 5 passed (adds: overlay shows the source app with a real, decoded icon) |
 | Network while captioning (packaged v0.2.0, 2026-10-12) | captions and translation on for 25 s, speech playing: `lsof -nP -i -a -p <app and helper PIDs>` listed **no sockets** |
 
+## 7. Brand alignment: wave cost (development build, 2026-10-14)
+
+Captions on, no audio playing, 20 s windows, cumulative CPU time from `app.getAppMetrics()`. These are sums per process type, as a percentage of one core.
+
+| Panel header waves | GPU process | Panel renderer |
+|---|---|---|
+| First version: 60 fps, DPR 2, animating while capturing | 15.4 % | 6.7 % (panel closed: 0.7 %) |
+| Final, silence (still frame) | 0.1 % | 0.4 % |
+| Final, animation forced (the speech case): 30 fps, DPR 1 | 0.8 % | 1.3 % (panel closed: 0.8 %) |
+
+The final setting adds ≈ 1.4 % of one core while speech plays and nothing in silence. UI tests after the change: 5 passed, plus the audio test skipped; unit tests: 46 passed.
+
 ## Known limitations
 
 - **Source app is a heuristic.** `audiotap` reports apps that have an *open audio output stream* (`kAudioProcessPropertyIsRunningOutput`), not the app that is actually audible. A browser keeps its stream open with a paused video, so a session can be attributed to "Google Chrome" while the speech came from another process (observed in our tests with `afplay`).

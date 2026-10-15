@@ -42,31 +42,59 @@
 
 **Regenerate:** `scripts/brand/vectorize-logo.sh`, then `npx electron scripts/render-icons.cjs`. The pipeline is reproducible: its output is byte-identical to the committed files.
 
-## Colors (from the logo)
+## Colors
 
-Sampled from the logo's pixels: navy `#00061E` / `#012478`, electric blue `#1658FA` / `#0034BE`, cyan `#18D2FD`, ice `#BBECFD`.
+The app and the website share one palette, taken from the website (v4). It is near-black and warm, with white pills and ember for "live". Before October 2026 the app used navy and cyan sampled from the logo; the logo itself is unchanged (navy `#00061E` / `#012478`, electric blue `#1658FA`, cyan `#18D2FD`, ice `#BBECFD`).
 
-| Token | Light | Dark | Use |
+**Dark is the default appearance** (Settings › General › Appearance: Dark / Light / System).
+
+| Token | Dark (default) | Light | Use |
 |---|---|---|---|
-| `--bg` | `#F5F6FA` (cool neutral) | `#0A0F1F` (navy) | window background |
-| `--surface` / `--surface-2` | `#FFFFFF` / `#ECEEF5` | `#121A30` / `#1A2440` | cards, inset areas |
-| `--text` | `#0D1326` (17:1) | `#EAF0FB` (16.7:1) | primary text |
-| `--text-2` | `#566079` (5.8:1) | `#9AA7C2` (7.9:1) | secondary text |
-| `--accent` | `#1658FA` electric blue (white text 5.5:1) | `#18D2FD` cyan (10.6:1; navy text on it 10.3:1) | primary action, selection, focus |
-| `--signal` | `#0789B8` (3.7:1, graphic) | `#18D2FD` | "listening" state, level meter |
-| `--success` / `--warning` / `--danger` | `#0F7A50` / `#9A5A00` / `#C42B1F` | `#3FD49A` / `#F2B84B` / `#FF7A6E` | states (all ≥ 4.5:1 on surfaces) |
-| `--chrome-tint` | ice at 35% | navy at 55% | tints the system vibrancy toward the brand (panel, sidebar, toolbar) |
-| `--glow` | blue shadow | cyan outline + blue shadow | **static** glow on the main button while listening, echoing the logo |
+| `--bg` | `#080808` | `#F6F6F7` | window background (solid, no vibrancy) |
+| `--surface` / `--surface-2` | `#111112` / `#18181B` | `#FFFFFF` / `#EEEEF0` | cards, sidebar / inset areas, selected rows |
+| `--text` | `#F4F4F5` (18.2:1) | `#0A0A0B` (18.3:1) | primary text |
+| `--text-2` | `#A1A1AA` (7.8:1) | `#52525B` (7.2:1) | secondary text |
+| `--text-3` | `#8B8B95` (5.9:1) | `#6E6E78` (4.7:1) | meta text, timestamps |
+| `--primary-bg` / `--primary-fg` | white / `#0A0A0A` | `#0A0A0A` / white | primary pill button |
+| `--accent` | `#F4F4F5` | `#0A0A0A` | toggles, slider fill, focus |
+| `--ember` / `--signal` | `#F2541B` (5.8:1) | `#E14A12` / `#C2410C` (4.8:1) | "Listening" dot, live badge, glow, search highlight |
+| `--ember-tag` | `#C2410C` | `#C2410C` | behind white text (5.2:1) |
+| `--success` / `--warning` / `--danger` | `#22C55E` / `#F5B341` / `#FF6B5E` | `#15803D` / `#9A5A00` / `#C42B1F` | states |
 
-- Contrast computed with the WCAG 2.x formula; tokens live in `src/renderer/shared/tokens.css`.
-- Radii 6 / 10 / 14 px; transitions 180 ms.
-- The **overlay does not use brand colors**: white on black for legibility.
-- Blue is macOS's default accent; the identity stands apart through cyan (active state) and navy (dark theme).
+- Contrast was computed with the WCAG 2.x formula; tokens live in `src/renderer/shared/tokens.css`.
+- Radii 8 / 12 / 14 px plus pills; transitions 180 ms.
+- The **caption box** keeps white on black for legibility; only the waves behind it use brand colours.
 
 ## Typography
 
-- **UI:** the system font (`-apple-system`, i.e. SF Pro).
-- **Captions:** System (SF Pro), Rounded (SF Pro Rounded), Serif (New York) or Monospaced (SF Mono). Default: System, medium weight — highly legible at large sizes.
+- **UI:** Manrope (variable 400–700, SIL OFL, a 21 KB Latin subset in `src/renderer/shared/fonts/` and `site/fonts/`), the website's face.
+- **Reading surfaces** (transcripts, live preview): the system font (`--font-read`), which is more legible for long text.
+- **Timestamps:** the system monospace.
+- **Captions:** System (SF Pro), Rounded, Serif (New York) or Monospaced (SF Mono); default System, medium weight.
+
+## Components
+
+- **Buttons are pills.** Primary is solid (white in dark); `size="lg"` can end in a contrasting disc with an arrow or play/stop icon, like the site's CTA. Secondary is the outlined "ghost" pill.
+- **Badge:** a dark pill with a coloured dot; ember for live states ("Open source · 100% on-device" in onboarding).
+- **Cards and sections** sit on `--surface` with 1 px hairline borders and no shadows in dark. Section titles are small uppercase labels.
+- **Segmented controls and tabs:** a pill track; the selected item is a subtle filled pill.
+
+## Sound waves
+
+The website's sound-wave landscape (WebGL, `src/renderer/shared/waves.ts`, the same shader as `site/js/waves.js`) appears behind:
+- the onboarding welcome;
+- the menu bar panel header while listening (driven by the real audio level);
+- the empty Live view;
+- the caption preview in Settings;
+- Settings › About.
+
+The overlay keeps its cheap 2D waves, recoloured to the same palette (ember, gold, ivory, teal, violet, cobalt).
+
+Rules:
+- They animate only while there is sound (in the panel and Live view) or on the welcome screen.
+- Elsewhere they are a single still frame.
+- They never animate with Reduce Motion, on software WebGL, or when a GPU can't hold 45 fps.
+- In app windows they run at 30 fps and are transparent (black becomes alpha), so they work on light and dark surfaces.
 
 ## UI icons
 
