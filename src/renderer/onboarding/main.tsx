@@ -9,7 +9,8 @@ import '../shared/base.css';
 import { api, useAppState, useLevel, useLive, useT } from '../shared/hooks';
 import { lastLines } from '../shared/liveReducer';
 import { currentModel, LevelMeter, ModelDownload } from '../shared/StatusBits';
-import { Button, cx } from '../shared/ui';
+import { Badge, Button, cx } from '../shared/ui';
+import { WaveBackdrop } from '../shared/WaveBackdrop';
 
 type T = ReturnType<typeof useT>;
 const STEPS = 4;
@@ -19,9 +20,9 @@ function Step({ icon, title, body, children, bare }: { icon: ReactNode; title: s
   useEffect(() => { h.current?.focus(); }, [title]); // VoiceOver announces each new step
   return (
     <div className="fade-in flex flex-col items-center text-center">
-      <div className={bare ? 'mb-4' : 'mb-4 flex h-14 w-14 items-center justify-center rounded-[16px] bg-[var(--accent-soft)] text-[var(--accent)]'}>{icon}</div>
+      <div className={bare ? 'mb-4' : 'mb-4 flex h-14 w-14 items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'}>{icon}</div>
       {/* focused so VoiceOver announces each step; no visible ring for a heading */}
-      <h1 ref={h} tabIndex={-1} className="text-[22px] font-semibold tracking-[-0.01em] focus-visible:outline-none">{title}</h1>
+      <h1 ref={h} tabIndex={-1} className="text-[26px] font-medium leading-[1.15] tracking-[-0.03em] focus-visible:outline-none">{title}</h1>
       <p className="mt-2 max-w-[420px] text-[14px] leading-[1.5] text-[var(--text-2)]">{body}</p>
       <div className="mt-6 w-full max-w-[400px]">{children}</div>
     </div>
@@ -76,11 +77,19 @@ function Onboarding() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-[var(--bg)]">
+    <div className="relative isolate flex h-full flex-col bg-[var(--bg)]">
+      {step === 1 && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-16 -z-10 h-[34%] fade-in [mask-image:linear-gradient(to_bottom,transparent,#000_45%)]">
+          <WaveBackdrop animate energy={0.35} top={0.85} time={4.5} />
+        </div>
+      )}
       <div className="drag h-[38px] shrink-0" />
       <div className="flex flex-1 flex-col items-center justify-center px-10">
         {step === 1 && (
-          <Step bare icon={<img src="./icon.png" alt="" className="h-16 w-16" />} title={t('onb.welcomeTitle')} body={t('onb.welcomeBody')} />
+          <>
+            <Badge className="mb-5">{t('onb.badge')}</Badge>
+            <Step bare icon={<img src="./icon.png" alt="" className="h-16 w-16" />} title={t('onb.welcomeTitle')} body={t('onb.welcomeBody')} />
+          </>
         )}
         {step === 2 && (
           <Step icon={<ShieldCheck size={26} strokeWidth={1.75} />} title={t('onb.permTitle')} body={t('onb.permBody')}>
@@ -101,7 +110,7 @@ function Onboarding() {
         {step === 4 && <TestStep s={s} t={t} onOk={setTestOk} />}
       </div>
 
-      <footer className="flex shrink-0 items-center gap-3 border-t border-[var(--separator)] px-6 h-16">
+      <footer className="flex shrink-0 items-center gap-3 border-t border-[var(--separator)] bg-[var(--bg)] px-6 h-16">
         <div className="flex items-center gap-1.5" aria-label={t('onb.step', { n: step, total: STEPS })} role="img">
           {Array.from({ length: STEPS }, (_, i) => (
             <span key={i} className={cx('h-1.5 rounded-full transition-all duration-[var(--dur)]', i + 1 === step ? 'w-5 bg-[var(--accent)]' : i + 1 < step ? 'w-1.5 bg-[var(--accent)] opacity-50' : 'w-1.5 bg-[var(--surface-2)]')} />
@@ -111,7 +120,7 @@ function Onboarding() {
         <div className="flex-1" />
         {step > 1 && step < 4 && <Button variant="ghost" icon={ArrowLeft} onClick={() => setStep(step - 1)}>{t('action.back')}</Button>}
         {step < 4 ? (
-          <Button variant="primary" disabled={!canNext} onClick={() => setStep(step + 1)}>{t('action.continue')}<ArrowRight size={14} strokeWidth={2} aria-hidden /></Button>
+          <Button variant="primary" trailing={ArrowRight} disabled={!canNext} onClick={() => setStep(step + 1)}>{t('action.continue')}</Button>
         ) : (
           <>
             {!testOk && <Button variant="ghost" onClick={() => void finish()}>{t('action.skipTest')}</Button>}

@@ -7,6 +7,7 @@ import '../shared/base.css';
 import { api, useAppState, useCommand, useLevel, useLive, useT } from '../shared/hooks';
 import { lastLines } from '../shared/liveReducer';
 import { currentModel, LevelMeter, ModelDownload, statusLabel, StatusDot } from '../shared/StatusBits';
+import { WaveBackdrop } from '../shared/WaveBackdrop';
 import { Button, Card, cx, IconButton, Kbd, Segmented, Select, Toggle } from '../shared/ui';
 import { formatMB } from '../shared/format';
 import { VAD_BYTES } from '../../shared/models';
@@ -33,7 +34,7 @@ function MoreMenu({ t, onClose }: { t: ReturnType<typeof useT>; onClose: () => v
   };
   return (
     <div ref={ref} role="menu" aria-label={t('panel.more')} onKeyDown={onKey}
-      className="fade-in absolute right-3 top-11 z-20 w-52 rounded-[10px] border border-[var(--border)] bg-[var(--glass-strong)] p-1 shadow-[0_8px_24px_rgba(0,0,0,.18)] backdrop-blur-xl">
+      className="fade-in absolute right-3 top-11 z-20 w-52 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface)] p-1 shadow-[0_12px_32px_rgba(0,0,0,.35)]">
       {items.map((it, i) => (
         <div key={it.label}>
           {i === 3 && <div className="my-1 h-px bg-[var(--separator)]" />}
@@ -77,7 +78,13 @@ function Panel() {
   const installed = s.models.filter((m) => m.installed);
 
   return (
-    <div className="relative flex h-full flex-col p-3 gap-3 bg-[var(--chrome-tint)]" onClick={() => menu && setMenu(false)}>
+    <div className="relative isolate flex h-full flex-col p-3 gap-3 bg-[var(--bg)]" onClick={() => menu && setMenu(false)}>
+      {/* sound waves behind the header while listening, driven by the real level */}
+      {capturing && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[150px] fade-in [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]">
+          <WaveBackdrop animate={db > -50} db={db} dpr={1} top={0.95} time={9} className="opacity-70" />
+        </div>
+      )}
       {/* header */}
       <header className="flex items-center gap-2.5 px-1 pt-0.5">
         <img src="./icon.png" alt="" className="h-8 w-8 -my-0.5" />
@@ -93,11 +100,11 @@ function Panel() {
       <button ref={mainBtn} type="button" disabled={st === 'stopping' || (!s.running && (st === 'modelMissing' || s.errorKind === 'model'))}
         onClick={() => void api().request('captions.toggle')}
         aria-label={s.running ? t('action.stop') : t('action.start')}
-        className={cx('flex h-14 w-full items-center gap-3 rounded-[12px] px-4 text-left transition-colors duration-[var(--dur)] disabled:opacity-50',
+        className={cx('flex h-14 w-full items-center gap-3 rounded-full pl-2 pr-5 text-left transition-[background-color,transform] duration-[var(--dur)] active:scale-[0.99] disabled:opacity-50',
           s.running || st === 'modelMissing' || s.errorKind === 'model'
-            ? cx('bg-[var(--glass-strong)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface)]', capturing && 'shadow-[var(--glow)]') // the card below holds the primary action; static glow while listening
-            : 'bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-hover)] shadow-[0_1px_3px_rgba(0,0,0,.2)]')}>
-        <span className={cx('flex h-8 w-8 items-center justify-center rounded-full', s.running || st === 'modelMissing' || s.errorKind === 'model' ? 'bg-[var(--surface-2)]' : 'bg-white/20')}>
+            ? cx('bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-2)]', capturing && 'shadow-[var(--glow)]') // the card below holds the primary action; static ember glow while listening
+            : 'bg-[var(--primary-bg)] text-[var(--primary-fg)] hover:bg-[var(--primary-hover)]')}>
+        <span className={cx('flex h-10 w-10 items-center justify-center rounded-full', s.running || st === 'modelMissing' || s.errorKind === 'model' ? 'bg-[var(--ember)] text-white' : 'bg-[var(--primary-fg)] text-[var(--primary-bg)]')}>
           {s.running ? <Square size={14} strokeWidth={2.2} fill="currentColor" aria-hidden /> : <Play size={16} strokeWidth={2.2} fill="currentColor" aria-hidden className="ml-0.5" />}
         </span>
         <span className="flex-1 text-[15px] font-semibold">{s.running ? t('action.stop') : t('action.start')}</span>
@@ -140,11 +147,11 @@ function Panel() {
       )}
 
       {/* live preview */}
-      <section aria-label={t('panel.live')} className="flex-1 min-h-0 rounded-[12px] bg-[var(--glass)] border border-[var(--border)] p-3 flex flex-col">
-        <h2 className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-2)]">{t('panel.live')}</h2>
+      <section aria-label={t('panel.live')} className="flex-1 min-h-0 rounded-[var(--r-lg)] bg-[var(--surface)] border border-[var(--border)] p-3 flex flex-col">
+        <h2 className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--text-3)]">{t('panel.live')}</h2>
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col justify-end selectable" aria-live="off">
           {preview.confirmed || preview.provisional ? (
-            <p className="text-[14px] leading-[1.45] line-clamp-5">
+            <p className="text-[14px] leading-[1.45] line-clamp-5 font-[family-name:var(--font-read)]">
               <span>{preview.confirmed}</span>{preview.provisional && <span className="text-[var(--text-2)]"> {preview.provisional}</span>}
             </p>
           ) : (
@@ -157,7 +164,7 @@ function Panel() {
       </section>
 
       {/* quick actions */}
-      <div className="rounded-[12px] bg-[var(--glass)] border border-[var(--border)] divide-y divide-[var(--separator)]">
+      <div className="rounded-[var(--r-lg)] bg-[var(--surface)] border border-[var(--border)] divide-y divide-[var(--separator)]">
         <div className="flex items-center gap-2 px-3 h-10">
           <span className="flex-1 text-[13px]">{t('panel.overlay')}</span>
           <IconButton icon={Move} label={t('panel.editOverlay')} onClick={() => void api().request('overlay.setEdit', !s.overlay.editMode)} aria-pressed={s.overlay.editMode} />

@@ -13,6 +13,7 @@ import { formatMB } from '../shared/format';
 import { api, useAppState, useCommand, useT } from '../shared/hooks';
 import { ModelDownload } from '../shared/StatusBits';
 import { Button, cx, Kbd, ListRow, Section, Segmented, Select, Slider, Toggle, ToolbarTab } from '../shared/ui';
+import { WaveBackdrop } from '../shared/WaveBackdrop';
 
 type Tab = (typeof SETTINGS_TABS)[number];
 type T = ReturnType<typeof useT>;
@@ -63,6 +64,13 @@ function General({ s, t }: { s: AppStateMsg; t: T }) {
             <ShortcutField value={st[k]} label={t(label)} t={t} error={s.shortcutErrors.includes(k)} onChange={(v) => set({ [k]: v })} />
           </ListRow>
         ))}
+      </Section>
+      <Section title={t('general.appearance')}>
+        <ListRow label={t('general.appearance')}>
+          <Segmented label={t('general.appearance')} value={st.appearance}
+            options={[{ value: 'dark', label: t('general.appearanceDark') }, { value: 'light', label: t('general.appearanceLight') }, { value: 'system', label: t('general.appearanceSystem') }]}
+            onChange={(v) => set({ appearance: v })} />
+        </ListRow>
       </Section>
       <Section title={t('general.language')}>
         <ListRow label={t('general.language')}>
@@ -118,8 +126,9 @@ function CaptionPreview({ s, t }: { s: AppStateMsg; t: T }) {
     return () => { alive = false; };
   }, [canTranslate, st.translationTarget, sample]);
   return (
-    <div aria-label={t('captions.preview')} role="img" className="mb-5 overflow-hidden rounded-[12px] border border-[var(--border)]"
-      style={{ background: 'radial-gradient(120% 90% at 30% 20%, #1A3FB8 0%, #0A1F66 45%, #020A2A 100%)' }}>
+    <div aria-label={t('captions.preview')} role="img" className="relative isolate mb-5 overflow-hidden rounded-[var(--r-lg)] border border-[var(--border)] bg-[#080808]">
+      {/* a still frame of the brand's sound waves stands in for "something playing" */}
+      <WaveBackdrop energy={0.55} top={0.9} time={6.5} className="-z-10" />
       <div className="flex min-h-[200px] items-end justify-center px-8 py-5">
         <div className="w-full max-w-[520px]">
           <CaptionBox look={{ ...st, fontSize: Math.round(st.fontSize * 0.75) }} lines={lines} level={level} waves={st.captionWaves}
@@ -286,11 +295,12 @@ function PrivacyTab({ s, t }: { s: AppStateMsg; t: T }) {
 function AboutTab({ s, t }: { s: AppStateMsg; t: T }) {
   return (
     <>
-      <div className="mb-6 flex items-center gap-4">
+      <div className="relative isolate mb-6 flex items-center gap-4 overflow-hidden rounded-[var(--r-lg)] border border-[var(--border)] bg-[#080808] p-5 text-[#F4F4F5]">
+        <WaveBackdrop energy={0.4} top={0.75} time={12} className="-z-10 opacity-80" />
         <img src="./icon.png" alt="" className="h-16 w-16" />
         <div>
           <h2 className="text-[20px] font-semibold">{APP_NAME}</h2>
-          <p className="text-[13px] text-[var(--text-2)]">{t('about.version', { v: s.app.version })}</p>
+          <p className="text-[13px] text-[#A1A1AA]">{t('about.version', { v: s.app.version })}</p>
         </div>
       </div>
       <Section title={t('about.data')}>
@@ -323,7 +333,7 @@ function SettingsWindow() {
   };
   return (
     <div className="flex h-full flex-col">
-      <header className="drag shrink-0 border-b border-[var(--separator)] pt-[30px] pb-1.5 bg-[var(--chrome-tint)]">
+      <header className="drag shrink-0 border-b border-[var(--separator)] pt-[30px] pb-1.5 bg-[var(--surface)]">
         <div role="tablist" aria-label={t('settings.title')} onKeyDown={onKey} className="flex justify-center gap-1">
           {SETTINGS_TABS.map((k) => <ToolbarTab key={k} icon={ICONS[k]} label={t(`tab.${k}`)} active={tab === k} onClick={() => setTab(k)} />)}
         </div>

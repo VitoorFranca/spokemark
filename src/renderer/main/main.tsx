@@ -5,7 +5,8 @@ import type { AppStateMsg, Command, SegmentMsg, SessionRowMsg } from '../../shar
 import { formatTimestamp } from '../../shared/exporters';
 import '../shared/base.css';
 import { formatDate, formatDuration } from '../shared/format';
-import { api, useAppState, useCommand, useLive, useT } from '../shared/hooks';
+import { api, useAppState, useCommand, useLevel, useLive, useT } from '../shared/hooks';
+import { WaveBackdrop } from '../shared/WaveBackdrop';
 import { statusLabel, StatusDot } from '../shared/StatusBits';
 import { Button, cx, EmptyState, IconButton, SidebarItem } from '../shared/ui';
 import { APP_NAME } from '../../shared/brand';
@@ -26,10 +27,10 @@ function useCopied(): [boolean, (text: string) => void] {
 
 function Transcript({ segments, open, provisional }: { segments: SegmentMsg[]; open?: string; provisional?: string }) {
   return (
-    <ol className="selectable space-y-3 text-[16px] leading-[1.55]">
+    <ol className="selectable space-y-3 text-[16px] leading-[1.55] font-[family-name:var(--font-read)]">
       {segments.map((g, i) => (
         <li key={`${g.startMs}-${i}`} className="grid grid-cols-[64px_1fr] gap-3">
-          <time className="tabular pt-[3px] text-[12px] text-[var(--text-2)] select-none">{formatTimestamp(g.startMs)}</time>
+          <time className="tabular pt-[4px] font-[family-name:var(--font-mono)] text-[11.5px] text-[var(--text-3)] select-none">{formatTimestamp(g.startMs)}</time>
           <p>{g.text}</p>
         </li>
       ))}
@@ -46,6 +47,7 @@ function Transcript({ segments, open, provisional }: { segments: SegmentMsg[]; o
 // ---- Live -----------------------------------------------------------------------------
 function LiveView({ s, t }: { s: AppStateMsg; t: T }) {
   const live = useLive();
+  const db = useLevel();
   const scroller = useRef<HTMLDivElement>(null);
   const [follow, setFollow] = useState(true);
   const [copied, copy] = useCopied();
@@ -79,7 +81,13 @@ function LiveView({ s, t }: { s: AppStateMsg; t: T }) {
       </header>
       <div ref={scroller} onScroll={onScroll} className="scroll relative flex-1 px-8 py-6" aria-live="off">
         {empty ? (
-          <EmptyState icon={Radio} title={t('live.emptyTitle')} body={s.running ? t('live.emptyListening') : t('live.emptyIdle')} />
+          <>
+            {/* the website's sound waves, quiet until speech arrives */}
+            <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] [mask-image:linear-gradient(to_top,#000_40%,transparent)]">
+              <WaveBackdrop animate={s.running && db > -50} dpr={1} db={s.running ? db : undefined} energy={0.25} top={0.85} time={14} className="opacity-60" />
+            </div>
+            <div className="relative h-full"><EmptyState icon={Radio} title={t('live.emptyTitle')} body={s.running ? t('live.emptyListening') : t('live.emptyIdle')} /></div>
+          </>
         ) : (
           <div className="mx-auto max-w-[720px]"><Transcript segments={live.segments} open={live.open} provisional={live.provisional} /></div>
         )}
@@ -97,7 +105,7 @@ function LiveView({ s, t }: { s: AppStateMsg; t: T }) {
 function Highlighted({ text }: { text: string }) {
   // snippet() marks matches with «»
   const parts = text.split(/«|»/);
-  return <>{parts.map((p, i) => (i % 2 ? <mark key={i} className="rounded-[3px] bg-[var(--accent-soft)] text-[var(--text)] px-0.5">{p}</mark> : <span key={i}>{p}</span>))}</>;
+  return <>{parts.map((p, i) => (i % 2 ? <mark key={i} className="rounded-[3px] bg-[var(--ember)]/20 text-[var(--text)] px-0.5">{p}</mark> : <span key={i}>{p}</span>))}</>;
 }
 
 function HistoryView({ s, t, searchRef }: { s: AppStateMsg; t: T; searchRef: React.RefObject<HTMLInputElement | null> }) {
@@ -148,7 +156,7 @@ function HistoryView({ s, t, searchRef }: { s: AppStateMsg; t: T; searchRef: Rea
         <label className="no-drag relative flex w-[280px] items-center">
           <Search size={14} strokeWidth={1.75} className="absolute left-2 text-[var(--text-2)]" aria-hidden />
           <input ref={searchRef} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('history.search')} aria-label={t('history.search')}
-            className="selectable h-7 w-full rounded-[7px] border border-[var(--border)] bg-[var(--surface)] pl-7 pr-2 text-[13px] placeholder:text-[var(--text-3)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]" />
+            className="selectable h-7 w-full rounded-full border border-[var(--border)] bg-[var(--surface-2)] pl-7 pr-2 text-[13px] placeholder:text-[var(--text-3)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]" />
         </label>
         <select aria-label={t('history.deleteRange')} value="" onChange={(e) => { const v = e.target.value; e.target.value = ''; if (v) void api().request('history.deleteRange', v as 'today'); }}
           className="no-drag h-7 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2 text-[13px] text-[var(--text)]" disabled={!rows?.length}>
@@ -176,16 +184,16 @@ function HistoryView({ s, t, searchRef }: { s: AppStateMsg; t: T; searchRef: Rea
               const on = r.id === sel;
               return (
                 <div key={r.id} role="option" aria-selected={on} onClick={() => setSel(r.id)}
-                  className={cx('mb-0.5 rounded-[8px] px-3 py-2', on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'hover:bg-[var(--surface-hover)]')}>
+                  className={cx('mb-1 rounded-[var(--r-md)] border px-3 py-2', on ? 'bg-[var(--surface-2)] border-[var(--border)]' : 'border-transparent hover:bg-[var(--surface-hover)]')}>
                   <div className="flex items-baseline gap-2">
                     <span className="flex-1 truncate text-[13px] font-semibold">{formatDate(r.startedAt, lang)}</span>
-                    {r.endedAt === null ? <span className="text-[11px] font-medium">{t('history.liveBadge')}</span>
-                      : <span className={cx('tabular text-[11px]', on ? 'opacity-85' : 'text-[var(--text-2)]')}>{formatDuration(r.endedAt - r.startedAt, lang)}</span>}
+                    {r.endedAt === null ? <span className="text-[11px] font-medium text-[var(--signal)]">{t('history.liveBadge')}</span>
+                      : <span className="tabular text-[11px] text-[var(--text-2)]">{formatDuration(r.endedAt - r.startedAt, lang)}</span>}
                   </div>
-                  <p className={cx('mt-0.5 line-clamp-2 text-[12px]', on ? 'opacity-90' : 'text-[var(--text-2)]')}>
+                  <p className="mt-0.5 line-clamp-2 text-[12px] text-[var(--text-2)]">
                     {r.snippet ? <Highlighted text={r.snippet} /> : r.preview}
                   </p>
-                  {r.sourceApp && <p className={cx('mt-0.5 text-[11px]', on ? 'opacity-80' : 'text-[var(--text-3)]')}>{r.sourceApp}</p>}
+                  {r.sourceApp && <p className="mt-0.5 text-[11px] text-[var(--text-3)]">{r.sourceApp}</p>}
                 </div>
               );
             })}
@@ -231,7 +239,7 @@ function MainWindow() {
   if (!s) return null;
   return (
     <div className="flex h-full">
-      <nav aria-label="Sidebar" className="drag flex w-[200px] shrink-0 flex-col px-2.5 pt-[52px] pb-3 bg-[var(--chrome-tint)]">
+      <nav aria-label="Sidebar" className="drag flex w-[200px] shrink-0 flex-col px-2.5 pt-[52px] pb-3 bg-[var(--surface)] border-r border-[var(--border)]">
         <div role="tablist" aria-orientation="vertical" className="flex flex-col gap-0.5">
           <SidebarItem icon={Radio} label={t('main.live')} active={view === 'live'} onClick={() => setView('live')}
             badge={s.running ? <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal)]" aria-label={t('state.listening')} /> : undefined} />
