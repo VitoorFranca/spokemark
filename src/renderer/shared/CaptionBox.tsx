@@ -1,6 +1,7 @@
 // Caption rendering shared by the overlay and the Settings preview.
 import { memo, useEffect, useRef, type ReactNode } from 'react';
 import { captionCss, type CaptionLook } from '../../shared/captionStyle';
+import { translationLineCount } from '../../shared/models';
 
 export interface CaptionLine { id: number; committed: string; provisional: string }
 export interface CaptionSource { name: string; icon: string | null }
@@ -85,7 +86,7 @@ export function Waves({ level }: { level: { current: number } }) {
   return <canvas ref={canvas} aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[38%] w-full" />;
 }
 
-export function CaptionBox({ look, lines, children, source, translation, translationEnabled, translationMode, showSourceApp, waves, level }: {
+export function CaptionBox({ look, lines, children, source, translation, translationEnabled, translationMode, speakerTurns, showSourceApp, waves, level }: {
   look: CaptionLook;
   lines: CaptionLine[];
   children?: ReactNode;
@@ -93,6 +94,8 @@ export function CaptionBox({ look, lines, children, source, translation, transla
   translation?: string;
   translationEnabled?: boolean;
   translationMode?: 'both' | 'translation';
+  /** Speaker changes active: the translation has one line per speaker ("– …"). */
+  speakerTurns?: boolean;
   showSourceApp?: boolean;
   waves?: boolean;
   level?: { current: number };
@@ -100,7 +103,7 @@ export function CaptionBox({ look, lines, children, source, translation, transla
   const css = captionCss(look);
   const both = translationEnabled && translationMode === 'both';
   const onlyTranslation = translationEnabled && translationMode === 'translation' && !!translation;
-  const translationLines = both ? (look.maxLines === 3 ? 2 : 1) : 0;
+  const translationLines = both ? translationLineCount(look.maxLines, !!speakerTurns) : 0;
   const withBox = look.opacity > 0;
   return (
     <div className="relative w-full overflow-hidden" style={{ ...css.box, ...(withBox ? { backgroundColor: `rgba(9,9,13,${look.opacity})` } : {}) }}>
@@ -114,12 +117,12 @@ export function CaptionBox({ look, lines, children, source, translation, transla
         )}
         <div className="flex flex-col justify-end overflow-hidden" style={{ ...css.text, height: `${look.maxLines * css.lineHeight}em` }}>
           {children ?? (onlyTranslation
-            ? <div className="caption-line whitespace-pre-wrap break-words">{translation}</div>
+            ? translation!.split('\n').map((l, i) => <div key={i} className="caption-line whitespace-pre-wrap break-words">{l}</div>)
             : lines.map((l) => <Line key={l.id} committed={l.committed} provisional={l.provisional} />))}
         </div>
         {both && (
           <div className="flex flex-col justify-end overflow-hidden" style={{ ...css.text, fontSize: Math.round(look.fontSize * 0.86), fontWeight: 500, color: 'rgba(255,255,255,0.68)', height: `${translationLines * css.lineHeight}em` }}>
-            {translation ? <div className="whitespace-pre-wrap break-words">{translation}</div> : null}
+            {translation ? translation.split('\n').map((l, i) => <div key={i} className="whitespace-pre-wrap break-words">{l}</div>) : null}
           </div>
         )}
       </div>

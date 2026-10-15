@@ -37,6 +37,7 @@ export const AppearanceSchema = z.object({
   captionWaves: z.boolean(),
   translationEnabled: z.boolean(),
   translationMode: z.enum(['both', 'translation']),
+  speakerTurns: z.boolean(), // speaker changes active: the translation gets one line per speaker
   status: z.enum(['idle', 'starting', 'capturing', 'stopping', 'error']),
   statusText: z.string().max(300),
 });

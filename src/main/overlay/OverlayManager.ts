@@ -1,3 +1,4 @@
+import { speakerChangesActive, translationLineCount } from '../../shared/models';
 import { BrowserWindow, ipcMain, screen, type Display, type Rectangle } from 'electron';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
@@ -58,6 +59,7 @@ export class OverlayManager extends EventEmitter {
     return {
       captionPreset: s.captionPreset, captionFont: s.captionFont, fontSize: s.fontSize, opacity: s.opacity, maxLines: s.maxLines,
       showSourceApp: s.showSourceApp, captionWaves: s.captionWaves, translationEnabled: s.translationEnabled, translationMode: s.translationMode,
+      speakerTurns: speakerChangesActive(s),
     };
   }
 
@@ -74,7 +76,7 @@ export class OverlayManager extends EventEmitter {
   /** Caption lines + optional source-app header + optional translation lines. */
   private height(): number {
     const s = this.settings.get();
-    const translationLines = s.translationEnabled && s.translationMode === 'both' ? (s.maxLines === 3 ? 2 : 1) : 0;
+    const translationLines = s.translationEnabled && s.translationMode === 'both' ? translationLineCount(s.maxLines, speakerChangesActive(s)) : 0;
     const header = s.showSourceApp ? 34 : 0;
     return Math.round(s.fontSize * LINE_H * s.maxLines + s.fontSize * 0.86 * LINE_H * translationLines + header + 36);
   }

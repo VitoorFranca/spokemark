@@ -21,7 +21,7 @@ import type { SubtitleView } from './subtitles/SubtitleManager';
 import { WindowManager } from './ui/WindowManager';
 import { SourceAppTracker, type SourceDetail } from './SourceApp';
 import { matchLanguage } from '../shared/lang';
-import { LiveTranslator } from './translate/LiveTranslator';
+import { LiveTranslator, viewSegments } from './translate/LiveTranslator';
 import { TranslatorService, type TargetLanguage } from './translate/TranslatorService';
 
 // ---- identity & data location (before 'ready') ------------------------------
@@ -409,6 +409,7 @@ app.whenReady().then(async () => {
   models = new ModelManager();
   metrics = new Metrics(E2E.metricsFile);
   captions = new CaptionsController(s0.model, { maxLines: s0.maxLines, maxCharsPerLine: 64 });
+  void captions.setSpeakerChanges(s0.speakerChanges);
   windows = new WindowManager(process.env.VITE_DEV_SERVER_URL ?? null);
   windows.dockAlways = s0.dockAlways;
   windows.updateDock();
@@ -438,9 +439,8 @@ app.whenReady().then(async () => {
   syncTranslator();
   captions.on('view', (v: SubtitleView) => {
     if (!settings.get().translationEnabled) return;
-    // translate the caption currently on screen (confirmed + provisional)
-    const text = v.lines.map((l) => [l.committed, l.provisional].filter(Boolean).join(' ')).join(' ').replace(/(^|\s)–(\s|$)/g, ' ').trim();
-    liveTranslator.update(text);
+    // translate the caption currently on screen (confirmed + provisional), one segment per speaker
+    liveTranslator.updateSegments(viewSegments(v.lines));
   });
 
   // ---- source app shown above the captions (real icon) ----
@@ -506,6 +506,8 @@ app.whenReady().then(async () => {
     if (has('historyEnabled') && !snapshot().running) store.persist = n.historyEnabled;
     if (has('retentionDays')) store.applyRetention(n.retentionDays);
     if (has('model')) void captions.setModel(n.model);
+    if (has('speakerChanges')) void captions.setSpeakerChanges(n.speakerChanges);
+    if (has('model', 'speakerChanges')) overlay.relayout(); // translation needs room for one line per speaker
     if (!keys.every((k) => k === 'boundsByDisplay')) broadcast();
   });
 

@@ -105,3 +105,57 @@ describe('matchLanguage', () => {
     expect(matchLanguage('ja', ids)).toBeNull();
   });
 });
+
+import { viewSegments } from '../../src/main/translate/LiveTranslator';
+import { speakerChangesActive, translationLineCount, TURN_MODELS } from '../../src/shared/models';
+
+describe('speaker changes and translation', () => {
+  it('splits the caption view into one segment per speaker; wrapped lines stay with their speaker', () => {
+    const segs = viewSegments([
+      { committed: 'so the plan is to ship', provisional: '' },
+      { committed: 'on friday', provisional: '' },
+      { committed: '– sounds good', provisional: 'to me' },
+      { committed: '', provisional: '– wait' },
+    ]);
+    expect(segs).toEqual([
+      { text: 'so the plan is to ship on friday', turn: false },
+      { text: 'sounds good to me', turn: true },
+      { text: 'wait', turn: true },
+    ]);
+    expect(viewSegments([{ committed: '–', provisional: '' }])).toEqual([]); // a fresh turn with no words yet
+  });
+
+  it('translates each speaker on its own and keeps one line per speaker with the dash', async () => {
+    vi.useFakeTimers();
+    const f = fake();
+    const shown: string[] = [];
+    const lt = new LiveTranslator(f.fn, 'es', 0);
+    lt.on('translation', (t) => shown.push(t.text));
+    lt.updateSegments([{ text: 'Hello', turn: false }, { text: 'Good morning', turn: true }]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.calls.map((c) => c.text)).toEqual(['Hello']);
+    f.calls[0]!.resolve('Hola');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.calls.map((c) => c.text)).toEqual(['Hello', 'Good morning']);
+    f.calls[1]!.resolve('Buenos días');
+    await vi.runAllTimersAsync();
+    expect(shown).toEqual(['Hola\n– Buenos días']);
+    // the first speaker is cached: a new third turn only translates the new text
+    lt.updateSegments([{ text: 'Hello', turn: false }, { text: 'Good morning', turn: true }, { text: 'Bye', turn: true }]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.calls.map((c) => c.text)).toEqual(['Hello', 'Good morning', 'Bye']);
+    f.calls[2]!.resolve('Adiós');
+    await vi.runAllTimersAsync();
+    expect(shown.at(-1)).toBe('Hola\n– Buenos días\n– Adiós');
+  });
+
+  it('speaker changes are a setting of their own, active only with a model that supports them', () => {
+    expect(TURN_MODELS).toEqual(['small.en-tdrz']);
+    expect(speakerChangesActive({ speakerChanges: true, model: 'small.en-tdrz' })).toBe(true);
+    expect(speakerChangesActive({ speakerChanges: true, model: 'base.en' })).toBe(false);
+    expect(speakerChangesActive({ speakerChanges: false, model: 'small.en-tdrz' })).toBe(false);
+    expect(translationLineCount(2, false)).toBe(1);
+    expect(translationLineCount(2, true)).toBe(2);
+    expect(translationLineCount(3, true)).toBe(3);
+  });
+});

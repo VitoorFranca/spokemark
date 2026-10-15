@@ -36,7 +36,7 @@ Calls, videos, podcasts — 100% on-device. No cloud, no account, no audio ever 
 - **Made for reading.** Caption presets (Standard, High contrast, Cinema), font, size, background opacity, 2–3 lines, top or bottom, per-display position — with a live preview.
 - **Live translation.** Show the translation under the original caption (or only the translation), translated on-device with Apple's Translation framework — macOS 26 or later, using the languages installed in System Settings.
 - **Knows what's playing.** The overlay shows the icon and name of the app the audio comes from, with soft waves that follow the voice.
-- **Speaker changes (experimental).** The *Enhanced · speakers* model starts a new line when a different person starts talking.
+- **Speaker changes (experimental).** Turn on *Mark speaker changes* (Settings › Transcription) and a new line starts, with a dash, when a different person starts talking; translations follow the same turns. It works with models that support it — today only *Enhanced · speakers* — and the app tells you when the current model doesn't.
 - **Native feel.** Dark (default), light or system appearance, full keyboard navigation, VoiceOver labels, English and Brazilian Portuguese.
 
 > [!NOTE]

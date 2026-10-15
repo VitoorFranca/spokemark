@@ -21,6 +21,8 @@ export class SettingsService extends EventEmitter {
   private load(): Settings | null {
     try {
       const raw = JSON.parse(readFileSync(this.file, 'utf8')) as Record<string, unknown>;
+      // Up to 0.2.0 speaker changes came with the model: keep them on for people who chose it.
+      if (!('speakerChanges' in raw) && raw.model === 'small.en-tdrz') raw.speakerChanges = true;
       const parsed = SettingsSchema.safeParse(raw);
       if (parsed.success) return parsed.data;
       // Keep whatever is still valid (e.g. after a schema change) instead of resetting everything.

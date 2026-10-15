@@ -70,6 +70,8 @@ Each entry lists what was chosen, the alternatives that were discarded, and why.
 - `no_context = true`; prompting with previous text off (`usePrompt: false`); no temperature fallback (bounded latency).
 
 **Speaker changes: tinydiarize** (`small.en-tdrz`, `tdrz_enable`, `whisper_full_get_segment_speaker_turn_next`).
+- A setting of its own (`speakerChanges`), not implied by the model: the worker gets `--tdrz` and the 3 s transition context only when the setting is on **and** the model supports it (`MODELS[id].turns`). Today one model does. With the setting off, the speakers model runs as a plain `small.en`. Settings written before this change keep it on if that model was selected.
+- Translation follows the turns: the caption view is split into one segment per speaker (a line starting with "–"), each segment is translated and cached on its own, and the overlay shows one translation line per speaker.
 - The turn is a pseudo-token that goes through LocalAgreement (counts only once confirmed) and starts a new line with "–".
 - Marks the change only; does not identify who is speaking.
 - **Transition context:** after a pause, the next window re-sends the last 3 s of the previous utterance (`turnContextS`) so the model sees both voices; repeated words are removed by text alignment. Apollo 13 audio: 1–2 of 21 turns without context, 11–12 with it; cost ≈ +0.4 s p50 first appearance.

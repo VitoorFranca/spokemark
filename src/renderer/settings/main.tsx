@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { SETTINGS_TABS, type AppStateMsg, type Command } from '../../shared/appIpc';
 import { APP_NAME } from '../../shared/brand';
 import { LANG_NAMES } from '../../shared/i18n';
-import { MODELS } from '../../shared/models';
+import { MODELS, speakerChangesActive, TURN_MODELS } from '../../shared/models';
 import { matchLanguage } from '../../shared/lang';
 import { CAPTION_FONTS, CAPTION_PRESETS, MODEL_IDS, type Settings } from '../../shared/settings';
 import '../shared/base.css';
@@ -12,7 +12,7 @@ import { CaptionBox, type CaptionLine } from '../shared/CaptionBox';
 import { formatMB } from '../shared/format';
 import { api, useAppState, useCommand, useT } from '../shared/hooks';
 import { ModelDownload } from '../shared/StatusBits';
-import { Button, cx, Kbd, ListRow, Section, Segmented, Select, Slider, Toggle, ToolbarTab } from '../shared/ui';
+import { Badge, Button, Card, cx, Kbd, ListRow, Section, Segmented, Select, Slider, Toggle, ToolbarTab } from '../shared/ui';
 import { WaveBackdrop } from '../shared/WaveBackdrop';
 
 type Tab = (typeof SETTINGS_TABS)[number];
@@ -223,6 +223,39 @@ function Rating({ label, value }: { label: string; value: string }) {
   return <span className="text-[12px] text-[var(--text-2)]">{label}: <span className="text-[var(--text)]">{value}</span></span>;
 }
 
+/** Speaker changes: a setting of its own, independent of the model; only some models can honour it. */
+function SpeakersSection({ s, t }: { s: AppStateMsg; t: T }) {
+  const st = s.settings;
+  const capable = TURN_MODELS[0]!;
+  const capableName = TURN_MODELS.map((id) => t(MODELS[id].label)).join(', ');
+  const capableStatus = s.models.find((m) => m.id === capable)!;
+  const active = speakerChangesActive(st);
+  return (
+    <Section title={t('speakers.title')} footer={t('speakers.support', { model: capableName })}>
+      <ListRow label={<span className="inline-flex items-center gap-2">{t('speakers.toggle')}<Badge tone="ember">{t('speakers.experimental')}</Badge></span>} description={t('speakers.body')}>
+        <Toggle label={t('speakers.toggle')} checked={st.speakerChanges} onChange={(v) => set({ speakerChanges: v })} />
+      </ListRow>
+      {st.speakerChanges && (
+        <div className="px-3 py-2.5">
+          {active ? (
+            <p className="flex items-center gap-1.5 text-[12px] text-[var(--success)]"><Check size={14} strokeWidth={2.2} aria-hidden />{t('speakers.ready', { model: t(MODELS[st.model].label) })}</p>
+          ) : (
+            <Card tone="warning" className="p-3">
+              <p className="text-[12px]">{t('speakers.unsupported', { current: t(MODELS[st.model].label) })}</p>
+              <div className="mt-2">
+                {capableStatus.download ? <ModelDownload model={capableStatus} t={t} compact />
+                  : capableStatus.installed
+                    ? <Button size="sm" variant="primary" onClick={() => void api().request('model.use', capable)}>{t('speakers.switch', { model: t(MODELS[capable].label) })}</Button>
+                    : <Button size="sm" variant="primary" onClick={() => void api().request('model.download', capable)}>{t('speakers.downloadSwitch', { model: t(MODELS[capable].label) })} · {formatMB(MODELS[capable].bytes)}</Button>}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+    </Section>
+  );
+}
+
 function TranscriptionTab({ s, t }: { s: AppStateMsg; t: T }) {
   return (
     <>
@@ -243,7 +276,7 @@ function TranscriptionTab({ s, t }: { s: AppStateMsg; t: T }) {
                   <Rating label={t('transcription.speed')} value={t(meta.speed)} />
                   <Rating label={t('transcription.accuracy')} value={t(meta.accuracy)} />
                 </div>
-                {meta.turns && <p className="mt-0.5 text-[12px] text-[var(--text-2)]">{t('transcription.turns')}</p>}
+                {meta.turns && <Badge tone="go" className="mt-1.5">{t('speakers.capable')}</Badge>}
                 {m.download && <div className="mt-2 max-w-[360px]"><ModelDownload model={m} t={t} /></div>}
                 {m.error && !m.download && <p className="mt-1 text-[12px] text-[var(--danger)]" title={m.error}>{t('model.downloadFailed')}</p>}
               </div>
@@ -257,6 +290,7 @@ function TranscriptionTab({ s, t }: { s: AppStateMsg; t: T }) {
           );
         })}
       </Section>
+      <SpeakersSection s={s} t={t} />
       <Section title={t('transcription.language')} footer={t('transcription.languageHint')}>
         <ListRow label={t('transcription.language')}><span className="text-[13px] text-[var(--text-2)]">{t('transcription.languageValue')}</span></ListRow>
       </Section>

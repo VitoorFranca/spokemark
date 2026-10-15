@@ -33,7 +33,7 @@ export class WhisperWorkerClient extends EventEmitter {
   ready = false;
   metalInitialized = false;
 
-  constructor(private readonly binPath: string, private readonly modelPath: string, private readonly vadModelPath: string) {
+  constructor(private readonly binPath: string, private readonly modelPath: string, private readonly vadModelPath: string, private readonly tdrz = false) {
     super();
   }
 
@@ -41,7 +41,7 @@ export class WhisperWorkerClient extends EventEmitter {
     const sup = new ChildSupervisor({
       name: 'whisper-worker',
       command: this.binPath,
-      args: ['--model', this.modelPath, '--vad-model', this.vadModelPath, '--threads', '4', ...(/-tdrz\.bin$/.test(this.modelPath) ? ['--tdrz'] : [])],
+      args: ['--model', this.modelPath, '--vad-model', this.vadModelPath, '--threads', '4', ...(this.tdrz ? ['--tdrz'] : [])],
       maxRestarts: 3,
     });
     this.sup = sup;

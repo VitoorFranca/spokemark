@@ -56,7 +56,7 @@ function App() {
     <div className={`relative flex h-full w-full items-end justify-center ${ap.editMode ? 'drag' : ''}`}>
       <div className="relative w-full transition-opacity duration-300" style={{ opacity: showBox ? 1 : 0 }}>
         <CaptionBox look={ap} lines={view.lines} source={extra.source} translation={extra.translation} translationEnabled={ap.translationEnabled}
-          translationMode={ap.translationMode} showSourceApp={ap.showSourceApp} waves={ap.captionWaves} level={level}>
+          translationMode={ap.translationMode} speakerTurns={ap.speakerTurns} showSourceApp={ap.showSourceApp} waves={ap.captionWaves} level={level}>
           {ap.status === 'error' && !hasText ? (
             <div style={{ fontSize: '0.55em', color: '#FFB4A8' }}>{ap.statusText}</div>
           ) : ap.editMode && !hasText ? (

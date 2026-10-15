@@ -20,6 +20,8 @@ export interface WhisperProviderOptions {
   minSilenceMs: number;
   /** Seconds of the previous utterance re-sent as context so a speaker-turn model sees the transition (0 = off). */
   turnContextS: number;
+  /** Ask the worker to mark speaker changes (tinydiarize; needs a model that supports it). */
+  tdrz?: boolean;
 }
 
 export const DEFAULT_WHISPER_OPTIONS: Omit<WhisperProviderOptions, 'binPath' | 'modelPath' | 'vadModelPath'> = {
@@ -48,7 +50,7 @@ export class WhisperProvider extends EventEmitter implements TranscriptionProvid
   constructor(private readonly ring: RingBuffer, private readonly opts: WhisperProviderOptions, worker?: WhisperWorkerClient) {
     super();
     // `worker` is injectable for unit tests (fake backend); production spawns the helper.
-    this.worker = worker ?? new WhisperWorkerClient(opts.binPath, opts.modelPath, opts.vadModelPath);
+    this.worker = worker ?? new WhisperWorkerClient(opts.binPath, opts.modelPath, opts.vadModelPath, !!opts.tdrz);
     this.vad = new VoiceActivityDetector(this.worker, { minSilenceMs: opts.minSilenceMs });
     this.worker.on('vad', (m: WorkerVad) => this.vad.onProbs(m.id, m.probs));
     this.worker.on('result', (m: WorkerResult) => this.onResult(m));

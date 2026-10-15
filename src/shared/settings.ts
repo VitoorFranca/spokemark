@@ -25,6 +25,8 @@ export const SettingsSchema = z.object({
   onboardingDone: z.boolean().default(false),
   // captions
   model: ModelIdSchema.default('base.en'),
+  /** Mark speaker changes. Independent of the model: it only takes effect with a model that supports it (MODELS[id].turns). */
+  speakerChanges: z.boolean().default(false),
   captionPreset: z.enum(CAPTION_PRESETS).default('default'),
   captionFont: z.enum(CAPTION_FONTS).default('system'),
   fontSize: z.number().min(16).max(64).default(28),

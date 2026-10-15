@@ -31,6 +31,7 @@ const provider = new WhisperProvider(pipeline.ring, {
   stepMs,
   usePrompt,
   turnContextS: Number(arg('turnctx', model.endsWith('-tdrz') ? '3' : '0')),
+  tdrz: arg('tdrz', model.endsWith('-tdrz') ? '1' : '0') === '1',
   binPath: path.join(binDir(), 'whisper-worker'),
   modelPath: modelPath(model),
   vadModelPath: vadModelPath(),

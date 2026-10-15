@@ -6,6 +6,7 @@ import { AudioProcessingPipeline } from './audio/AudioProcessingPipeline';
 import type { Word } from './asr/localAgreement';
 import type { TranscriptUpdate } from './asr/TranscriptionProvider';
 import { DEFAULT_WHISPER_OPTIONS, WhisperProvider } from './asr/WhisperProvider';
+import { MODELS } from '../shared/models';
 import { binDir, modelPath, vadModelPath, type ModelId } from './paths';
 import { SubtitleManager, type SubtitleView } from './subtitles/SubtitleManager';
 
@@ -26,6 +27,8 @@ export class CaptionsController extends EventEmitter {
   private pipeline: AudioProcessingPipeline | null = null;
   private provider: WhisperProvider | null = null;
   private model: ModelId;
+  /** User wants speaker changes; effective only with a model that supports them. */
+  private speakerChanges = false;
   indicator: Indicator = 'idle';
   indicatorText = '';
   private silent = false;
@@ -84,7 +87,8 @@ export class CaptionsController extends EventEmitter {
       binPath: path.join(binDir(), 'whisper-worker'),
       modelPath: modelPath(this.model),
       vadModelPath: vadModelPath(),
-      turnContextS: this.model.endsWith('-tdrz') ? 3 : 0,
+      turnContextS: this.turnsActive ? 3 : 0,
+      tdrz: this.turnsActive,
     });
     const capture = new AudioCaptureService(path.join(binDir(), 'audiotap'));
     this.pipeline = pipeline;
@@ -167,6 +171,20 @@ export class CaptionsController extends EventEmitter {
   }
 
   /** Switch model without restarting the app (restarts the worker only). */
+  private get turnsActive(): boolean {
+    return this.speakerChanges && !!MODELS[this.model].turns;
+  }
+
+  /** Turn speaker changes on/off; restarts a running session only when the effective mode changes. */
+  async setSpeakerChanges(on: boolean): Promise<void> {
+    const before = this.turnsActive;
+    this.speakerChanges = on;
+    if (this.turnsActive !== before && (this.state.state === 'capturing' || this.state.state === 'starting')) {
+      await this.stop();
+      await this.start();
+    }
+  }
+
   async setModel(m: ModelId): Promise<void> {
     if (m === this.model) return;
     this.model = m;

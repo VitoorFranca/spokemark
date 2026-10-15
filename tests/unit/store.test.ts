@@ -1,6 +1,7 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { SettingsService } from '../../src/main/settings/SettingsService';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TURN_TEXT, type Word } from '../../src/main/asr/localAgreement';
 import { TranscriptStore } from '../../src/main/store/TranscriptStore';
@@ -118,5 +119,19 @@ describe('exporters', () => {
     expect(md.startsWith('# Session\n\n_')).toBe(true);
     expect(md).toContain('01:02:03 · Zoom_');
     expect(md).toContain('**00:00:02** Overlapping cue.');
+  });
+});
+
+
+describe('settings migration', () => {
+  const load = (raw: object) => {
+    const f = path.join(mkdtempSync(path.join(tmpdir(), 'sm-')), 'settings.json');
+    writeFileSync(f, JSON.stringify(raw));
+    return new SettingsService(f).get();
+  };
+  it('keeps speaker changes on for people who chose the speakers model before it was a setting', () => {
+    expect(load({ model: 'small.en-tdrz' }).speakerChanges).toBe(true);
+    expect(load({ model: 'base.en' }).speakerChanges).toBe(false);
+    expect(load({ model: 'small.en-tdrz', speakerChanges: false }).speakerChanges).toBe(false);
   });
 });
