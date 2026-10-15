@@ -6,26 +6,45 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 
 // ---- Button -------------------------------------------------------------------
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
-export function Button({ variant = 'secondary', size = 'md', icon: Icon, className, children, ...rest }:
-  ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm' | 'md' | 'lg'; icon?: LucideIcon }) {
-  const sizes = { sm: 'h-6 px-2.5 text-[12px] gap-1.5 rounded-[6px]', md: 'h-7 px-3 gap-1.5 rounded-[6px]', lg: 'h-11 px-4 text-[15px] gap-2 rounded-[10px] font-semibold' };
+/**
+ * Pill buttons, as on the website: primary is the solid pill (white in dark), secondary the
+ * outlined "ghost" pill. `trailing` puts an icon in a contrasting disc at the end (site CTA).
+ */
+export function Button({ variant = 'secondary', size = 'md', icon: Icon, trailing: Trailing, className, children, ...rest }:
+  ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm' | 'md' | 'lg'; icon?: LucideIcon; trailing?: LucideIcon }) {
+  const sizes = { sm: 'h-6 px-2.5 text-[12px] gap-1.5', md: 'h-7 px-3.5 gap-1.5', lg: 'h-11 px-5 text-[15px] gap-2.5 font-semibold' };
   const styles: Record<Variant, string> = {
-    primary: 'bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-hover)] shadow-[var(--shadow-1)]',
-    secondary: 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] shadow-[var(--shadow-1)] hover:bg-[var(--surface-2)]',
+    primary: 'bg-[var(--primary-bg)] text-[var(--primary-fg)] hover:bg-[var(--primary-hover)] shadow-[var(--shadow-1)]',
+    secondary: 'bg-[var(--accent-soft)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-hover)]',
     ghost: 'text-[var(--text)] hover:bg-[var(--surface-hover)]',
-    danger: 'bg-[var(--surface)] text-[var(--danger)] border border-[var(--border)] hover:bg-[var(--danger-soft)]',
+    danger: 'bg-[var(--accent-soft)] text-[var(--danger)] border border-[var(--border)] hover:bg-[var(--danger-soft)]',
   };
   return (
-    <button type="button" className={cx('inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors duration-[var(--dur)] disabled:opacity-45 disabled:pointer-events-none', sizes[size], styles[variant], className)} {...rest}>
+    <button type="button" className={cx('inline-flex items-center justify-center rounded-full font-medium whitespace-nowrap transition-[background-color,transform] duration-[var(--dur)] active:scale-[0.98] disabled:opacity-45 disabled:pointer-events-none', sizes[size], styles[variant], Trailing && size === 'lg' && 'pr-1.5', className)} {...rest}>
       {Icon && <Icon size={size === 'lg' ? 18 : 14} strokeWidth={1.75} aria-hidden />}
       {children}
+      {Trailing && (
+        <span aria-hidden className={cx('inline-flex items-center justify-center rounded-full', size === 'lg' ? 'h-8 w-8' : 'h-5 w-5', variant === 'primary' ? 'bg-[var(--primary-fg)] text-[var(--primary-bg)]' : 'bg-[var(--text)] text-[var(--bg)]')}>
+          <Trailing size={size === 'lg' ? 15 : 11} strokeWidth={2.25} />
+        </span>
+      )}
     </button>
+  );
+}
+
+/** Site badge: a dark pill with a coloured dot (ember for live states). */
+export function Badge({ children, tone = 'ember', className }: { children: ReactNode; tone?: 'ember' | 'go' | 'muted' | 'danger'; className?: string }) {
+  const dot = { ember: 'bg-[var(--ember)]', go: 'bg-[var(--success)]', muted: 'bg-[var(--text-3)]', danger: 'bg-[var(--danger)]' }[tone];
+  return (
+    <span className={cx('inline-flex items-center gap-1.5 h-[22px] rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 text-[11px] font-medium text-[var(--text)]', className)}>
+      <span aria-hidden className={cx('h-1.5 w-1.5 rounded-full', dot)} />{children}
+    </span>
   );
 }
 
 export function IconButton({ icon: Icon, label, className, size = 28, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { icon: LucideIcon; label: string; size?: number }) {
   return (
-    <button type="button" aria-label={label} title={label} className={cx('inline-flex items-center justify-center rounded-[6px] text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors duration-[var(--dur)]', className)} style={{ width: size, height: size }} {...rest}>
+    <button type="button" aria-label={label} title={label} className={cx('inline-flex items-center justify-center rounded-full text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors duration-[var(--dur)]', className)} style={{ width: size, height: size }} {...rest}>
       <Icon size={16} strokeWidth={1.75} aria-hidden />
     </button>
   );
@@ -36,7 +55,7 @@ export function Toggle({ checked, onChange, label, disabled }: { checked: boolea
   return (
     <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={() => onChange(!checked)}
       className={cx('relative inline-flex h-[20px] w-[34px] shrink-0 rounded-full transition-colors duration-[var(--dur)] disabled:opacity-45', checked ? 'bg-[var(--accent)]' : 'bg-[var(--surface-2)] border border-[var(--border)]')}>
-      <span className={cx('absolute top-[2px] h-4 w-4 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,.3)] transition-transform duration-[var(--dur)] ease-[var(--ease)]', checked ? 'translate-x-[16px]' : 'translate-x-[2px]')} />
+      <span className={cx('absolute top-[2px] h-4 w-4 rounded-full shadow-[0_1px_2px_rgba(0,0,0,.3)] transition-transform duration-[var(--dur)] ease-[var(--ease)]', checked ? 'translate-x-[16px] bg-[var(--on-accent)]' : 'translate-x-[2px] bg-white')} />
     </button>
   );
 }
@@ -51,14 +70,14 @@ export function Segmented<T extends string>({ value, options, onChange, label, s
     requestAnimationFrame(() => ref.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus());
   };
   return (
-    <div ref={ref} role="radiogroup" aria-label={label} className={cx('inline-flex rounded-[7px] bg-[var(--surface-2)] p-[2px]', size === 'sm' ? 'text-[12px]' : '')}
+    <div ref={ref} role="radiogroup" aria-label={label} className={cx('inline-flex rounded-full bg-[var(--surface-2)] p-[2px] border border-[var(--border)]', size === 'sm' ? 'text-[12px]' : '')}
       onKeyDown={(e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); move(1); } if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); move(-1); } }}>
       {options.map((o) => {
         const on = o.value === value;
         return (
           <button key={o.value} type="button" role="radio" aria-checked={on} aria-label={o.aria} tabIndex={on ? 0 : -1} onClick={() => onChange(o.value)}
-            className={cx('rounded-[5px] font-medium transition-colors duration-[var(--dur)] flex-1 whitespace-nowrap', size === 'sm' ? 'h-[22px] px-2' : 'h-6 px-3',
-              on ? 'bg-[var(--surface)] text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,.12)]' : 'text-[var(--text-2)] hover:text-[var(--text)]')}>
+            className={cx('rounded-full font-medium transition-colors duration-[var(--dur)] flex-1 whitespace-nowrap', size === 'sm' ? 'h-[22px] px-2' : 'h-6 px-3',
+              on ? 'bg-[var(--selected)] text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,.12),inset_0_0_0_1px_var(--border)]' : 'text-[var(--text-2)] hover:text-[var(--text)]')}>
             {o.label}
           </button>
         );
@@ -84,7 +103,7 @@ export function Select<T extends string>({ value, options, onChange, label, clas
   return (
     <div className={cx('relative inline-flex', className)}>
       <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value as T)}
-        className="appearance-none h-7 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-1)] pl-2.5 pr-7 text-[13px] text-[var(--text)] w-full">
+        className="appearance-none h-7 rounded-full border border-[var(--border)] bg-[var(--surface-2)] pl-3 pr-7 text-[13px] text-[var(--text)] w-full">
         {options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
       </select>
       <ChevronDown size={14} strokeWidth={1.75} aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-2)]" />
@@ -95,7 +114,7 @@ export function Select<T extends string>({ value, options, onChange, label, clas
 // ---- Layout pieces ----------------------------------------------------------------------
 export function Card({ children, className, tone }: { children: ReactNode; className?: string; tone?: 'warning' | 'danger' | 'accent' }) {
   const toneCls = tone === 'warning' ? 'bg-[var(--warning-soft)]' : tone === 'danger' ? 'bg-[var(--danger-soft)]' : tone === 'accent' ? 'bg-[var(--accent-soft)]' : 'bg-[var(--surface)] border border-[var(--border)]';
-  return <div className={cx('rounded-[10px]', toneCls, className)}>{children}</div>;
+  return <div className={cx('rounded-[var(--r-lg)]', toneCls, className)}>{children}</div>;
 }
 
 /** Grouped settings list (System Settings style): optional title, rows separated by hairlines. */
@@ -103,8 +122,8 @@ export function Section({ title, children, footer }: { title?: string; children:
   const id = useId();
   return (
     <section aria-labelledby={title ? id : undefined} className="mb-5">
-      {title && <h2 id={id} className="mb-1.5 px-1 text-[12px] font-semibold text-[var(--text-2)]">{title}</h2>}
-      <div className="rounded-[10px] bg-[var(--surface)] border border-[var(--border)] divide-y divide-[var(--separator)]">{children}</div>
+      {title && <h2 id={id} className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-3)]">{title}</h2>}
+      <div className="rounded-[var(--r-lg)] bg-[var(--surface)] border border-[var(--border)] divide-y divide-[var(--separator)]">{children}</div>
       {footer && <p className="mt-1.5 px-1 text-[12px] text-[var(--text-2)]">{footer}</p>}
     </section>
   );
@@ -127,7 +146,7 @@ export function EmptyState({ icon: Icon, title, body, action }: { icon: LucideIc
   return (
     <div className="flex h-full flex-col items-center justify-center text-center px-10 fade-in">
       <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-2)]"><Icon size={20} strokeWidth={1.75} aria-hidden /></div>
-      <h2 className="text-[15px] font-semibold">{title}</h2>
+      <h2 className="text-[17px] font-semibold tracking-[-0.01em]">{title}</h2>
       <p className="mt-1 max-w-[340px] text-[13px] text-[var(--text-2)]">{body}</p>
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -137,7 +156,7 @@ export function EmptyState({ icon: Icon, title, body, action }: { icon: LucideIc
 export function ProgressBar({ value, label }: { value: number; label: string }) {
   return (
     <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value * 100)} className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
-      <div className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-[var(--dur)]" style={{ width: `${Math.max(2, value * 100)}%` }} />
+      <div className="h-full rounded-full bg-[var(--text)] transition-[width] duration-[var(--dur)]" style={{ width: `${Math.max(2, value * 100)}%` }} />
     </div>
   );
 }
@@ -156,8 +175,8 @@ export function Kbd({ accel, className }: { accel: string; className?: string })
 export function SidebarItem({ icon: Icon, label, active, onClick, badge }: { icon: LucideIcon; label: string; active: boolean; onClick: () => void; badge?: ReactNode }) {
   return (
     <button type="button" role="tab" aria-selected={active} onClick={onClick}
-      className={cx('no-drag flex w-full items-center gap-2 rounded-[6px] px-2 h-7 text-[13px] text-left transition-colors duration-[var(--dur)]', active ? 'bg-[var(--sidebar-selected)] font-medium' : 'hover:bg-[var(--surface-hover)]')}>
-      <Icon size={16} strokeWidth={1.75} className={active ? 'text-[var(--accent)]' : 'text-[var(--text-2)]'} aria-hidden />
+      className={cx('no-drag flex w-full items-center gap-2 rounded-[8px] px-2.5 h-8 text-[13px] text-left transition-colors duration-[var(--dur)]', active ? 'bg-[var(--sidebar-selected)] font-medium' : 'hover:bg-[var(--surface-hover)]')}>
+      <Icon size={16} strokeWidth={1.75} className={active ? 'text-[var(--text)]' : 'text-[var(--text-2)]'} aria-hidden />
       <span className="flex-1 truncate">{label}</span>
       {badge}
     </button>
@@ -167,7 +186,7 @@ export function SidebarItem({ icon: Icon, label, active, onClick, badge }: { ico
 export function ToolbarTab({ icon: Icon, label, active, onClick }: { icon: LucideIcon; label: string; active: boolean; onClick: () => void }) {
   return (
     <button type="button" role="tab" aria-selected={active} onClick={onClick}
-      className={cx('no-drag flex w-[76px] flex-col items-center gap-0.5 rounded-[7px] py-1.5 text-[11px] transition-colors duration-[var(--dur)]', active ? 'bg-[var(--sidebar-selected)] text-[var(--accent)]' : 'text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]')}>
+      className={cx('no-drag flex w-[76px] flex-col items-center gap-0.5 rounded-[10px] py-1.5 text-[11px] transition-colors duration-[var(--dur)]', active ? 'bg-[var(--selected)] text-[var(--text)] shadow-[inset_0_0_0_1px_var(--border)]' : 'text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]')}>
       <Icon size={20} strokeWidth={1.6} aria-hidden />
       <span className={active ? 'font-medium' : ''}>{label}</span>
     </button>
