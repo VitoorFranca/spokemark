@@ -76,11 +76,12 @@ export class CaptionsController extends EventEmitter {
     this.setIndicator(s === 'starting' ? 'starting' : s === 'stopping' ? 'starting' : 'idle');
   }
 
-  async start(): Promise<void> {
+  /** Start capturing. `resume`: keep the captions on screen (after a pause) instead of clearing them. */
+  async start(opts: { resume?: boolean } = {}): Promise<void> {
     if (!this.state.can('starting')) return;
     this.state.to('starting');
     this.silent = false;
-    this.subtitles.clear();
+    if (!opts.resume) this.subtitles.clear();
     const pipeline = new AudioProcessingPipeline(60);
     const provider = new WhisperProvider(pipeline.ring, {
       ...DEFAULT_WHISPER_OPTIONS,
@@ -183,6 +184,11 @@ export class CaptionsController extends EventEmitter {
       await this.stop();
       await this.start();
     }
+  }
+
+  /** Remove the captions from the overlay (after Stop). */
+  clearView(): void {
+    this.subtitles.clear();
   }
 
   async setModel(m: ModelId): Promise<void> {

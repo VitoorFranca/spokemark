@@ -7,9 +7,11 @@ All notable changes to this project are documented here. The format is based on
 ## [Unreleased]
 
 ### Fixed
+- **Settings reset each other**: changing one setting put every other setting back to its default (a partial update filled in all defaults). Each change now only touches its own setting.
 - **Translation with speaker changes**: each speaker is translated separately and shown on its own line with a dash, matching the original, instead of one run-on line.
 
 ### Changed
+- **Stop and Pause.** Stop ends the session and hides the captions. Pause stops listening but keeps the last captions on screen; Resume continues the same session. Both are in the menu bar panel and the main window; ⌥⌘C still starts (or resumes) and stops.
 - **New look, shared with the website.** Near-black warm surfaces, the Manrope typeface, pill buttons, ember for live states, and solid windows instead of translucent vibrancy.
 - **Sound waves.** The website's sound-wave landscape appears on the welcome screen, behind the panel header while listening (it follows the real audio level), in the empty Live view, behind the caption preview and in About. The overlay waves use the same palette.
 - **Speaker changes are a setting of their own** (Settings › Transcription), no longer tied to picking a model. The app explains that only some models support it (today *Enhanced · speakers*), offers to switch or download it, and the panel shows a hint when the current model can't. People who already used the speakers model keep it on.

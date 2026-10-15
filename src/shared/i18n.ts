@@ -4,7 +4,8 @@ import { APP_NAME } from './brand';
 
 const en = {
   // states
-  'state.idle': 'Paused',
+  'state.idle': 'Stopped',
+  'state.paused': 'Paused',
   'state.listening': 'Listening',
   'state.processing': 'Listening',
   'state.loading': 'Loading model…',
@@ -16,6 +17,10 @@ const en = {
   // actions
   'action.start': 'Start Captions',
   'action.stop': 'Stop Captions',
+  'action.pause': 'Pause',
+  'action.resume': 'Resume Captions',
+  'action.stopShort': 'Stop',
+  'panel.pausedHint': 'Paused: the captions stay on screen. Stop hides them.',
   'action.openSettings': 'Settings…',
   'action.openWindow': 'Open Window',
   'action.about': 'About {app}',
@@ -243,7 +248,8 @@ const en = {
 export type StringKey = keyof typeof en;
 
 const ptBR: Record<StringKey, string> = {
-  'state.idle': 'Pausado',
+  'state.idle': 'Parado',
+  'state.paused': 'Pausado',
   'state.listening': 'Ouvindo',
   'state.processing': 'Ouvindo',
   'state.loading': 'Carregando modelo…',
@@ -254,6 +260,10 @@ const ptBR: Record<StringKey, string> = {
   'state.modelMissing': 'Modelo não baixado',
   'action.start': 'Iniciar legendas',
   'action.stop': 'Parar legendas',
+  'action.pause': 'Pausar',
+  'action.resume': 'Retomar legendas',
+  'action.stopShort': 'Parar',
+  'panel.pausedHint': 'Pausado: as legendas ficam na tela. Parar as esconde.',
   'action.openSettings': 'Configurações…',
   'action.openWindow': 'Abrir janela',
   'action.about': 'Sobre o {app}',

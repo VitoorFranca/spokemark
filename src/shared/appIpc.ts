@@ -2,7 +2,7 @@
 // main -> renderer messages are validated in the preload; renderer -> main
 // requests are validated in main before anything runs.
 import { z } from 'zod';
-import { ModelIdSchema, SettingsSchema } from './settings';
+import { ModelIdSchema, SettingsPatchSchema, SettingsSchema } from './settings';
 
 export const SegmentSchema = z.object({ startMs: z.number(), endMs: z.number(), text: z.string().max(4000) });
 export type SegmentMsg = z.infer<typeof SegmentSchema>;
@@ -16,7 +16,7 @@ export const ModelStatusSchema = z.object({
 });
 export type ModelStatusMsg = z.infer<typeof ModelStatusSchema>;
 
-export const StatusSchema = z.enum(['idle', 'loading', 'listening', 'processing', 'silent', 'stopping', 'permission', 'error', 'modelMissing']);
+export const StatusSchema = z.enum(['idle', 'paused', 'loading', 'listening', 'processing', 'silent', 'stopping', 'permission', 'error', 'modelMissing']);
 export type Status = z.infer<typeof StatusSchema>;
 
 export const AppStateSchema = z.object({
@@ -25,6 +25,7 @@ export const AppStateSchema = z.object({
   systemLang: z.enum(['en', 'pt-BR']),
   status: StatusSchema,
   running: z.boolean(), // starting or capturing
+  paused: z.boolean(), // not listening, session kept and captions frozen on screen
   errorMessage: z.string().nullable(), // technical detail (logs/tooltip only)
   errorKind: z.enum(['model', 'capture', 'unknown']).nullable(), // drives the user-facing message
   vadInstalled: z.boolean(),
@@ -74,9 +75,11 @@ export const Requests = {
   'state.get': z.undefined(),
   'live.subscribe': z.undefined(),
   'captions.toggle': z.undefined(),
+  'captions.stop': z.undefined(),
+  'captions.pause': z.undefined(), // pause while listening, resume while paused
   'overlay.setVisible': z.boolean(),
   'overlay.setEdit': z.boolean(),
-  'settings.update': SettingsSchema.partial(),
+  'settings.update': SettingsPatchSchema,
   'settings.applyPreset': z.enum(['default', 'contrast', 'cinema']),
   'model.download': ModelIdSchema,
   'model.cancel': ModelIdSchema,

@@ -50,6 +50,17 @@ export const SettingsSchema = z.object({
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
+/**
+ * A partial update: only the keys present are validated and returned.
+ * Not SettingsSchema.partial(): in zod 4 that still fills in every default, so a one-key
+ * update would reset every other setting to its default.
+ */
+export const SettingsPatchSchema = z.object(
+  Object.fromEntries(Object.entries(SettingsSchema.shape).map(([k, v]) => [k, v.unwrap().optional()])) as {
+    [K in keyof typeof SettingsSchema.shape]: z.ZodOptional<ReturnType<(typeof SettingsSchema.shape)[K]['unwrap']>>;
+  },
+);
+
 /** Values a preset applies when chosen (the user can still tweak each one). */
 export const PRESET_VALUES: Record<(typeof CAPTION_PRESETS)[number], Pick<Settings, 'captionFont' | 'fontSize' | 'opacity'>> = {
   default: { captionFont: 'system', fontSize: 28, opacity: 0.6 },

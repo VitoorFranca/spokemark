@@ -41,9 +41,17 @@ test('start and stop from the menu bar panel', async () => {
   await p.getByRole('button', { name: /Iniciar legendas|Start Captions/ }).click();
   await expect(p.getByText(/^(Ouvindo|Listening)/)).toBeVisible({ timeout: 30_000 });
   expect((await hook('pids')).length).toBe(2); // audiotap + whisper-worker
-  await p.getByRole('button', { name: /Parar legendas|Stop Captions/ }).click();
+  // pause: stops listening but keeps the captions overlay; resume listens again
+  await p.getByRole('button', { name: /^(Pausar|Pause)$/ }).click();
   await expect(p.getByText(/^(Pausado|Paused)$/)).toBeVisible({ timeout: 10_000 });
   expect(await hook('pids')).toEqual([]);
+  await p.getByRole('button', { name: /Retomar legendas|Resume Captions/ }).click();
+  await expect(p.getByText(/^(Ouvindo|Listening)/)).toBeVisible({ timeout: 30_000 });
+  // stop: ends the session and hides the caption overlay
+  await p.getByRole('button', { name: /Parar legendas|Stop Captions/ }).click();
+  await expect(p.getByText(/^(Parado|Stopped)$/)).toBeVisible({ timeout: 10_000 });
+  expect(await hook('pids')).toEqual([]);
+  expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((w) => w.webContents.getURL().includes('overlay') && w.isVisible()))).toBe(false);
   await app.close();
   await expect.poll(helperCount).toBe('0');
 });

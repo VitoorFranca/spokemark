@@ -1,4 +1,4 @@
-import { ArrowDown, Check, Clock, Copy, Download, FileText, History, Play, Radio, Search, Settings2, Trash2, X } from 'lucide-react';
+import { ArrowDown, Check, Clock, Copy, Download, FileText, History, Pause, Play, Radio, Search, Settings2, Square, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { AppStateMsg, Command, SegmentMsg, SessionRowMsg } from '../../shared/appIpc';
@@ -74,9 +74,16 @@ function LiveView({ s, t }: { s: AppStateMsg; t: T }) {
         <div className="flex-1" />
         <div className="no-drag flex items-center gap-2">
           <Button icon={copied ? Check : Copy} disabled={empty} onClick={() => copy(text)}>{copied ? t('action.copied') : t('action.copy')}</Button>
-          <Button variant={s.running ? 'secondary' : 'primary'} icon={s.running ? X : Play} disabled={s.status === 'stopping' || s.status === 'modelMissing'} onClick={() => void api().request('captions.toggle')}>
-            {s.running ? t('action.stop') : t('action.start')}
-          </Button>
+          {(s.running || s.paused) && (
+            <Button icon={s.running ? Pause : Play} disabled={s.status === 'stopping'} onClick={() => void api().request('captions.pause')}>
+              {s.running ? t('action.pause') : t('action.resume')}
+            </Button>
+          )}
+          {s.running || s.paused ? (
+            <Button icon={Square} disabled={s.status === 'stopping'} onClick={() => void api().request('captions.stop')}>{t('action.stop')}</Button>
+          ) : (
+            <Button variant="primary" icon={Play} disabled={s.status === 'stopping' || s.status === 'modelMissing'} onClick={() => void api().request('captions.toggle')}>{t('action.start')}</Button>
+          )}
         </div>
       </header>
       <div ref={scroller} onScroll={onScroll} className="scroll relative flex-1 px-8 py-6" aria-live="off">

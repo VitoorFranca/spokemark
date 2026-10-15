@@ -1,4 +1,4 @@
-import { AppWindow, Info, Lock, LogOut, MessageSquareText, MoreHorizontal, Move, Play, Settings2, ShieldAlert, Square, TriangleAlert } from 'lucide-react';
+import { AppWindow, Info, Lock, LogOut, MessageSquareText, MoreHorizontal, Move, Pause, Play, Settings2, ShieldAlert, Square, TriangleAlert } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Command } from '../../shared/appIpc';
@@ -96,20 +96,29 @@ function Panel() {
       </header>
       {menu && <MoreMenu t={t} onClose={() => setMenu(false)} />}
 
-      {/* primary control */}
-      <button ref={mainBtn} type="button" disabled={st === 'stopping' || (!s.running && (st === 'modelMissing' || s.errorKind === 'model'))}
-        onClick={() => void api().request('captions.toggle')}
-        aria-label={s.running ? t('action.stop') : t('action.start')}
-        className={cx('flex h-14 w-full items-center gap-3 rounded-full pl-2 pr-5 text-left transition-[background-color,transform] duration-[var(--dur)] active:scale-[0.99] disabled:opacity-50',
-          s.running || st === 'modelMissing' || s.errorKind === 'model'
-            ? cx('bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-2)]', capturing && 'shadow-[var(--glow)]') // the card below holds the primary action; static ember glow while listening
-            : 'bg-[var(--primary-bg)] text-[var(--primary-fg)] hover:bg-[var(--primary-hover)]')}>
-        <span className={cx('flex h-10 w-10 items-center justify-center rounded-full', s.running || st === 'modelMissing' || s.errorKind === 'model' ? 'bg-[var(--ember)] text-white' : 'bg-[var(--primary-fg)] text-[var(--primary-bg)]')}>
-          {s.running ? <Square size={14} strokeWidth={2.2} fill="currentColor" aria-hidden /> : <Play size={16} strokeWidth={2.2} fill="currentColor" aria-hidden className="ml-0.5" />}
-        </span>
-        <span className="flex-1 text-[15px] font-semibold">{s.running ? t('action.stop') : t('action.start')}</span>
-        {capturing && <span className="text-[var(--signal)]"><LevelMeter db={db} active label={t('panel.level')} /></span>}
-      </button>
+      {/* primary control: Start; while listening Pause + Stop; while paused Resume + Stop */}
+      <div className="flex items-center gap-2">
+        <button ref={mainBtn} type="button" disabled={st === 'stopping' || (!s.running && !s.paused && (st === 'modelMissing' || s.errorKind === 'model'))}
+          onClick={() => void api().request(s.running || s.paused ? 'captions.pause' : 'captions.toggle')}
+          aria-label={s.running ? t('action.pause') : s.paused ? t('action.resume') : t('action.start')}
+          className={cx('flex h-14 min-w-0 flex-1 items-center gap-3 rounded-full pl-2 pr-5 text-left transition-[background-color,transform] duration-[var(--dur)] active:scale-[0.99] disabled:opacity-50',
+            s.running || (!s.paused && (st === 'modelMissing' || s.errorKind === 'model'))
+              ? cx('bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-2)]', capturing && 'shadow-[var(--glow)]') // static ember glow while listening
+              : 'bg-[var(--primary-bg)] text-[var(--primary-fg)] hover:bg-[var(--primary-hover)]')}>
+          <span className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', s.running ? 'bg-[var(--ember)] text-white' : !s.paused && (st === 'modelMissing' || s.errorKind === 'model') ? 'bg-[var(--surface-2)]' : 'bg-[var(--primary-fg)] text-[var(--primary-bg)]')}>
+            {s.running ? <Pause size={15} strokeWidth={2.2} fill="currentColor" aria-hidden /> : <Play size={16} strokeWidth={2.2} fill="currentColor" aria-hidden className="ml-0.5" />}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{s.running ? t('action.pause') : s.paused ? t('action.resume') : t('action.start')}</span>
+          {capturing && <span className="text-[var(--signal)]"><LevelMeter db={db} active label={t('panel.level')} /></span>}
+        </button>
+        {(s.running || s.paused) && (
+          <button type="button" disabled={st === 'stopping'} onClick={() => void api().request('captions.stop')} aria-label={t('action.stop')} title={t('action.stop')}
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] transition-colors duration-[var(--dur)] hover:bg-[var(--surface-2)] disabled:opacity-50">
+            <Square size={15} strokeWidth={2.2} fill="currentColor" aria-hidden />
+          </button>
+        )}
+      </div>
+      {s.paused && <p className="-mt-1 px-2 text-[11.5px] text-[var(--text-2)]">{t('panel.pausedHint')}</p>}
 
       {/* actionable states */}
       {st === 'permission' && (

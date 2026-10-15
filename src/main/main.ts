@@ -77,6 +77,7 @@ function status(): Status {
     const i: Indicator = captions.indicator;
     return i === 'permission' ? 'permission' : i === 'silent' ? 'silent' : i === 'processing' ? 'processing' : 'listening';
   }
+  if (paused) return 'paused';
   if (!models.isReady(settings.get().model)) return 'modelMissing';
   if (permission === 'denied') return 'permission';
   return 'idle';
@@ -96,6 +97,7 @@ function snapshot(): AppStateMsg {
     systemLang: resolveLang('system', app.getPreferredSystemLanguages()),
     status: status(),
     running: captions.state.state === 'starting' || captions.state.state === 'capturing',
+    paused,
     errorMessage: captions.state.state === 'error' ? captions.state.error : null,
     errorKind: captions.state.state === 'error' ? errorKind(captions.state.error ?? '') : null,
     vadInstalled: models.isInstalled('vad'),
@@ -225,14 +227,51 @@ function registerShortcuts(): void {
 
 // ---- actions --------------------------------------------------------------------
 
-async function toggleCaptions(): Promise<{ ok: boolean; reason?: string }> {
-  const st = captions.state.state;
-  if (st === 'capturing' || st === 'starting') { await captions.stop(); return { ok: true }; }
-  if (st === 'stopping') return { ok: false, reason: 'busy' };
+/**
+ * Stop vs. pause:
+ * - Stop ends the session, clears the captions and hides the caption overlay.
+ * - Pause stops listening but keeps the session open and the last captions frozen on screen;
+ *   resuming continues the same session.
+ */
+let paused = false;
+
+async function startCaptions(): Promise<{ ok: boolean; reason?: string }> {
+  if (captions.state.state === 'stopping') return { ok: false, reason: 'busy' };
   if (!models.isReady(settings.get().model)) { broadcast(); return { ok: false, reason: 'modelMissing' }; }
   if (settings.get().overlayVisible) overlay.show();
-  await captions.start();
+  const resume = paused;
+  await captions.start({ resume });
+  paused = false;
+  broadcast();
   return { ok: true };
+}
+
+async function stopCaptions(): Promise<{ ok: boolean }> {
+  const wasPaused = paused;
+  paused = false;
+  await captions.stop();
+  if (wasPaused) { store.endSession(); provisionalText = ''; sendTailSoon(); sourceTracker.reset(); currentSource = null; }
+  captions.clearView();
+  overlay.setExtra({ source: null, translation: '' });
+  if (!overlay.isEditMode) overlay.hide(); // only for now: the overlayVisible setting is unchanged
+  broadcast();
+  return { ok: true };
+}
+
+async function pauseCaptions(): Promise<{ ok: boolean }> {
+  const st = captions.state.state;
+  if (st !== 'capturing' && st !== 'starting') return { ok: false };
+  paused = true;
+  await captions.stop();
+  broadcast();
+  return { ok: true };
+}
+
+/** Shortcut / menu bar: start (or resume) when not listening, stop when listening. */
+async function toggleCaptions(): Promise<{ ok: boolean; reason?: string }> {
+  const st = captions.state.state;
+  if (st === 'capturing' || st === 'starting') return stopCaptions();
+  return startCaptions();
 }
 
 function setOverlayVisible(v: boolean): void {
@@ -266,6 +305,8 @@ async function handleRequest(win: BrowserWindow | undefined, name: RequestName, 
     case 'state.get': return snapshot();
     case 'live.subscribe': return liveReset();
     case 'captions.toggle': { const r = await toggleCaptions(); broadcast(); return r; }
+    case 'captions.stop': return stopCaptions();
+    case 'captions.pause': { const st = captions.state.state; return st === 'capturing' || st === 'starting' ? pauseCaptions() : paused ? startCaptions() : { ok: false }; }
     case 'overlay.setVisible': setOverlayVisible(p as boolean); return true;
     case 'overlay.setEdit': setEditMode(p as boolean); if (p) windows.hidePanel(); return true;
     case 'settings.update': settings.update(p as Partial<Settings>); return true;
@@ -356,8 +397,9 @@ async function exportSession(win: BrowserWindow | undefined, o: { id: number; fo
 
 async function shutdown(): Promise<void> {
   globalShortcut.unregisterAll();
+  paused = false;
   try { await captions.stop(); } catch { /* ignore */ }
-  try { store.close(); } catch { /* ignore */ }
+  try { store.endSession(); store.close(); } catch { /* ignore */ }
   killAllChildren('SIGKILL'); // nothing may outlive us
   settings.flush();
 }
@@ -467,8 +509,9 @@ app.whenReady().then(async () => {
   captions.state.on('change', () => broadcast());
   captions.on('log', log);
   captions.on('session', (what: 'started' | 'ended') => {
-    if (what === 'started') { store.persist = settings.get().historyEnabled; store.startSession(settings.get().model); provisionalText = ''; sendLive(liveReset()); }
-    else { store.endSession(); provisionalText = ''; sendTailSoon(); sourceTracker.reset(); currentSource = null; overlay.setExtra({ source: null, translation: '' }); }
+    // a pause keeps the session (and the frozen captions) until resume or stop
+    if (what === 'started') { if (store.liveStartedAt === null) { store.persist = settings.get().historyEnabled; store.startSession(settings.get().model); provisionalText = ''; sendLive(liveReset()); } }
+    else if (!paused) { store.endSession(); provisionalText = ''; sendTailSoon(); sourceTracker.reset(); currentSource = null; overlay.setExtra({ source: null, translation: '' }); }
   });
   captions.on('update', (u: TranscriptUpdate) => {
     store.addConfirmed(u.confirmed, u.utteranceEnd);

@@ -135,3 +135,19 @@ describe('settings migration', () => {
     expect(load({ model: 'small.en-tdrz', speakerChanges: false }).speakerChanges).toBe(false);
   });
 });
+
+import { Requests } from '../../src/shared/appIpc';
+
+describe('settings updates', () => {
+  it('a one-key update carries only that key, so earlier changes are kept', () => {
+    const patch = Requests['settings.update'].parse({ fontSize: 30 });
+    expect(patch).toEqual({ fontSize: 30 });
+    expect(Requests['settings.update'].safeParse({ fontSize: 3 }).success).toBe(false); // still validated
+    const f = path.join(mkdtempSync(path.join(tmpdir(), 'su-')), 'settings.json');
+    const s = new SettingsService(f);
+    s.update(Requests['settings.update'].parse({ fontSize: 30 }));
+    s.update(Requests['settings.update'].parse({ appearance: 'light' }));
+    s.update(Requests['settings.update'].parse({ speakerChanges: true }));
+    expect(s.get()).toMatchObject({ fontSize: 30, appearance: 'light', speakerChanges: true });
+  });
+});
