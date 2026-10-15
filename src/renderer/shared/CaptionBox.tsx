@@ -21,11 +21,14 @@ const Line = memo(function Line({ committed, provisional }: { committed: string;
  * the animation runs only while there is sound (and never with reduced motion),
  * then settles into a still frame.
  */
+// The website's iridescent palette: ember, gold, ivory, teal, violet, cobalt (thin fibre-like strokes).
 const WAVES = [
-  { color: '59,130,246', freq: 1.3, speed: 0.9, phase: 0.0, alpha: 0.55 },  // blue
-  { color: '34,211,238', freq: 1.9, speed: 1.3, phase: 1.7, alpha: 0.4 },   // cyan
-  { color: '168,85,247', freq: 1.1, speed: 0.7, phase: 3.1, alpha: 0.45 },  // purple
-  { color: '244,63,94', freq: 2.3, speed: 1.1, phase: 4.4, alpha: 0.35 },   // rose
+  { color: '242,84,27', freq: 1.3, speed: 0.9, phase: 0.0, alpha: 0.55 },   // ember
+  { color: '250,199,92', freq: 1.9, speed: 1.3, phase: 1.7, alpha: 0.45 },  // gold
+  { color: '242,237,220', freq: 1.6, speed: 1.0, phase: 2.4, alpha: 0.35 }, // ivory
+  { color: '51,168,178', freq: 1.1, speed: 0.7, phase: 3.1, alpha: 0.45 },  // teal
+  { color: '128,77,199', freq: 2.3, speed: 1.1, phase: 4.4, alpha: 0.4 },   // violet
+  { color: '59,108,246', freq: 0.9, speed: 0.8, phase: 5.2, alpha: 0.35 },  // cobalt
 ];
 
 export function Waves({ level }: { level: { current: number } }) {
@@ -43,8 +46,8 @@ export function Waves({ level }: { level: { current: number } }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       const glow = ctx.createLinearGradient(0, h * 0.35, 0, h);
-      glow.addColorStop(0, 'rgba(20,30,60,0)');
-      glow.addColorStop(1, `rgba(40,60,140,${0.10 + amp * 0.18})`);
+      glow.addColorStop(0, 'rgba(40,24,16,0)');
+      glow.addColorStop(1, `rgba(120,64,30,${0.08 + amp * 0.16})`);
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, w, h);
       for (const wv of WAVES) {
@@ -56,7 +59,7 @@ export function Waves({ level }: { level: { current: number } }) {
           x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.strokeStyle = `rgba(${wv.color},${wv.alpha * (0.45 + amp * 0.4)})`;
-        ctx.lineWidth = 1.4;
+        ctx.lineWidth = 1;
         ctx.stroke();
       }
     };

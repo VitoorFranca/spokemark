@@ -2,6 +2,7 @@
 // colour with a lit crest, fibre-like streaks and glitter, plus a warm flare that
 // sweeps along the crests. Plain WebGL (1 or 2), one full-screen triangle.
 // The ridges are waveforms: their amplitude follows a speech "energy" signal.
+// The desktop app uses the same shader in src/renderer/shared/waves.ts: change both together.
 
 const VERT = `
 attribute vec2 aPos;
