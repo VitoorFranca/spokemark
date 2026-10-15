@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-15
+
 ### Fixed
 - **Settings reset each other**: changing one setting put every other setting back to its default (a partial update filled in all defaults). Each change now only touches its own setting.
 - **Translation with speaker changes**: each speaker is translated separately and shown on its own line with a dash, matching the original, instead of one run-on line.

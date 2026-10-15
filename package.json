@@ -1,7 +1,7 @@
 {
   "name": "spokemark",
   "productName": "Spokemark",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Spokemark — live captions for anything your Mac plays (CoreAudio Process Tap + whisper.cpp/Metal)",
   "main": "dist/main/main.js",
