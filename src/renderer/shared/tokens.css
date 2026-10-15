@@ -1,106 +1,128 @@
-/* Spokemark design tokens (docs/BRAND.md), derived from the logo:
-   navy #00061E/#012478, electric blue #1658FA, cyan #18D2FD, ice #BBECFD.
-   The main process sets data-theme on <html> (nativeTheme); the media query is
-   only the pre-JS fallback. */
+/* Spokemark design tokens (docs/BRAND.md): the same language as the website
+   (near-black warm surfaces, white pills, ember for "listening").
+   Dark is the default appearance (Settings › General); the main process sets
+   data-theme on <html> (nativeTheme). The media query is only the pre-JS fallback. */
 :root {
+  --font-ui: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-read: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; /* transcripts */
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 14px;
+  --r-pill: 999px;
+  --dur: 180ms;
+  --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
   color-scheme: light;
-  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-  --bg: #F5F6FA;            /* window content: cool neutral */
-  --surface: #FFFFFF;       /* cards, rows */
-  --surface-2: #ECEEF5;     /* inset areas, segmented track */
-  --surface-hover: rgba(13, 30, 90, 0.05);
-  --text: #0D1326;          /* 17:1 on --bg */
-  --text-2: #566079;        /* 5.8:1 on --bg */
-  --text-3: #8A93A8;        /* decorative / disabled only */
-  --border: rgba(13, 30, 90, 0.10);
-  --separator: rgba(13, 30, 90, 0.08);
-  --accent: #1658FA;        /* logo electric blue; white text 5.5:1 */
-  --accent-hover: #0E47D6;
-  --accent-soft: rgba(22, 88, 250, 0.10);
+  --bg: #F6F6F7;
+  --surface: #FFFFFF;
+  --surface-2: #EEEEF0;
+  --surface-hover: rgba(10, 10, 11, 0.05);
+  --text: #0A0A0B;          /* 18.3:1 on --bg */
+  --text-2: #52525B;        /* 7.2:1 on --bg */
+  --text-3: #6E6E78;        /* 4.7:1 on --bg */
+  --border: rgba(10, 10, 11, 0.09);
+  --separator: rgba(10, 10, 11, 0.07);
+  --accent: #0A0A0A;
+  --accent-hover: #27272A;
+  --accent-soft: rgba(10, 10, 11, 0.07);
   --on-accent: #FFFFFF;
-  --signal: #0789B8;        /* logo cyan, darkened for 3.7:1 as a graphic on --bg */
-  --success: #0F7A50;
-  --success-soft: rgba(15, 122, 80, 0.10);
+  --primary-bg: #0A0A0A;
+  --primary-fg: #FFFFFF;
+  --primary-hover: #27272A;
+  --signal: #C2410C;        /* ember, darkened for 4.8:1 on --bg */
+  --ember: #E14A12;
+  --ember-tag: #C2410C;
+  --cobalt: #2F5BE0;
+  --success: #15803D;
+  --success-soft: rgba(21, 128, 61, 0.10);
   --warning: #9A5A00;
   --warning-soft: rgba(196, 120, 0, 0.12);
   --danger: #C42B1F;
   --danger-soft: rgba(196, 43, 31, 0.10);
-  --focus: rgba(22, 88, 250, 0.45);
-  --shadow-1: 0 1px 2px rgba(13, 30, 90, 0.08);
-  --glow: 0 4px 16px rgba(22, 88, 250, 0.28);
-
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --dur: 180ms;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
-  --glass: rgba(255, 255, 255, 0.55);
-  --glass-strong: rgba(255, 255, 255, 0.80);
-  --sidebar-selected: rgba(22, 88, 250, 0.10);
-  --chrome-tint: rgba(240, 244, 255, 0.35); /* tints vibrancy toward the brand */
+  --focus: rgba(10, 10, 11, 0.45);
+  --shadow-1: 0 1px 2px rgba(10, 10, 11, 0.06);
+  --glow: 0 0 0 1px rgba(194, 65, 12, 0.35), 0 8px 24px -8px rgba(194, 65, 12, 0.35);
+  --glass: var(--surface);
+  --glass-strong: var(--surface);
+  --sidebar-selected: var(--surface-2);
+  --chrome-tint: transparent;
+  --selected: #FFFFFF;
 }
-
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
   color-scheme: dark;
-  --bg: #0A0F1F;            /* logo navy */
-  --surface: #121A30;
-  --surface-2: #1A2440;
-  --surface-hover: rgba(140, 170, 255, 0.07);
-  --text: #EAF0FB;          /* 16.7:1 on --bg */
-  --text-2: #9AA7C2;        /* 7.9:1 on --bg */
-  --text-3: #6B7894;
-  --border: rgba(140, 170, 255, 0.13);
-  --separator: rgba(140, 170, 255, 0.09);
-  --accent: #18D2FD;        /* logo cyan: 10.6:1 on --bg; navy text on it 10.3:1 */
-  --accent-hover: #5CDFFF;
-  --accent-soft: rgba(24, 210, 253, 0.13);
-  --on-accent: #04122E;
-  --signal: #18D2FD;
-  --success: #3FD49A;
-  --success-soft: rgba(63, 212, 154, 0.14);
-  --warning: #F2B84B;
-  --warning-soft: rgba(242, 184, 75, 0.14);
-  --danger: #FF7A6E;
-  --danger-soft: rgba(255, 122, 110, 0.14);
-  --focus: rgba(24, 210, 253, 0.55);
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --glow: 0 0 0 1px rgba(24, 210, 253, 0.35), 0 6px 22px rgba(22, 88, 250, 0.45);
-  --glass: rgba(120, 150, 255, 0.07);
-  --glass-strong: rgba(18, 26, 48, 0.78);
-  --sidebar-selected: rgba(24, 210, 253, 0.12);
-  --chrome-tint: rgba(6, 12, 34, 0.55); /* navy over the system's dark vibrancy */
+  --bg: #080808;            /* near-black, warm (site) */
+  --surface: #111112;       /* cards, sidebar */
+  --surface-2: #18181B;     /* inset areas, selected rows, segmented track */
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --text: #F4F4F5;          /* 18.2:1 on --bg */
+  --text-2: #A1A1AA;        /* 7.8:1 on --bg */
+  --text-3: #8B8B95;        /* 5.9:1 on --bg */
+  --border: rgba(255, 255, 255, 0.08);
+  --separator: rgba(255, 255, 255, 0.06);
+  --accent: #F4F4F5;        /* selection, toggles, slider: white, like the site's pills */
+  --accent-hover: #FFFFFF;
+  --accent-soft: rgba(255, 255, 255, 0.08);
+  --on-accent: #0A0A0A;
+  --primary-bg: #FFFFFF;    /* primary pill */
+  --primary-fg: #0A0A0A;
+  --primary-hover: #E9E9EC;
+  --signal: #F2541B;        /* listening: ember */
+  --ember: #F2541B;
+  --ember-tag: #C2410C;     /* behind white text: 5.2:1 */
+  --cobalt: #3B6CF6;
+  --success: #22C55E;
+  --success-soft: rgba(34, 197, 94, 0.14);
+  --warning: #F5B341;
+  --warning-soft: rgba(245, 179, 65, 0.14);
+  --danger: #FF6B5E;
+  --danger-soft: rgba(255, 107, 94, 0.14);
+  --focus: rgba(255, 255, 255, 0.55);
+  --shadow-1: none;
+  --glow: 0 0 0 1px rgba(242, 84, 27, 0.45), 0 8px 24px -6px rgba(242, 84, 27, 0.45);
+  --glass: var(--surface);
+  --glass-strong: var(--surface);
+  --sidebar-selected: var(--surface-2);
+  --chrome-tint: transparent;
+  --selected: rgba(255, 255, 255, 0.10);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0A0F1F;            /* logo navy */
-  --surface: #121A30;
-  --surface-2: #1A2440;
-  --surface-hover: rgba(140, 170, 255, 0.07);
-  --text: #EAF0FB;          /* 16.7:1 on --bg */
-  --text-2: #9AA7C2;        /* 7.9:1 on --bg */
-  --text-3: #6B7894;
-  --border: rgba(140, 170, 255, 0.13);
-  --separator: rgba(140, 170, 255, 0.09);
-  --accent: #18D2FD;        /* logo cyan: 10.6:1 on --bg; navy text on it 10.3:1 */
-  --accent-hover: #5CDFFF;
-  --accent-soft: rgba(24, 210, 253, 0.13);
-  --on-accent: #04122E;
-  --signal: #18D2FD;
-  --success: #3FD49A;
-  --success-soft: rgba(63, 212, 154, 0.14);
-  --warning: #F2B84B;
-  --warning-soft: rgba(242, 184, 75, 0.14);
-  --danger: #FF7A6E;
-  --danger-soft: rgba(255, 122, 110, 0.14);
-  --focus: rgba(24, 210, 253, 0.55);
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --glow: 0 0 0 1px rgba(24, 210, 253, 0.35), 0 6px 22px rgba(22, 88, 250, 0.45);
-  --glass: rgba(120, 150, 255, 0.07);
-  --glass-strong: rgba(18, 26, 48, 0.78);
-  --sidebar-selected: rgba(24, 210, 253, 0.12);
-  --chrome-tint: rgba(6, 12, 34, 0.55); /* navy over the system's dark vibrancy */
+  --bg: #080808;            /* near-black, warm (site) */
+  --surface: #111112;       /* cards, sidebar */
+  --surface-2: #18181B;     /* inset areas, selected rows, segmented track */
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --text: #F4F4F5;          /* 18.2:1 on --bg */
+  --text-2: #A1A1AA;        /* 7.8:1 on --bg */
+  --text-3: #8B8B95;        /* 5.9:1 on --bg */
+  --border: rgba(255, 255, 255, 0.08);
+  --separator: rgba(255, 255, 255, 0.06);
+  --accent: #F4F4F5;        /* selection, toggles, slider: white, like the site's pills */
+  --accent-hover: #FFFFFF;
+  --accent-soft: rgba(255, 255, 255, 0.08);
+  --on-accent: #0A0A0A;
+  --primary-bg: #FFFFFF;    /* primary pill */
+  --primary-fg: #0A0A0A;
+  --primary-hover: #E9E9EC;
+  --signal: #F2541B;        /* listening: ember */
+  --ember: #F2541B;
+  --ember-tag: #C2410C;     /* behind white text: 5.2:1 */
+  --cobalt: #3B6CF6;
+  --success: #22C55E;
+  --success-soft: rgba(34, 197, 94, 0.14);
+  --warning: #F5B341;
+  --warning-soft: rgba(245, 179, 65, 0.14);
+  --danger: #FF6B5E;
+  --danger-soft: rgba(255, 107, 94, 0.14);
+  --focus: rgba(255, 255, 255, 0.55);
+  --shadow-1: none;
+  --glow: 0 0 0 1px rgba(242, 84, 27, 0.45), 0 8px 24px -6px rgba(242, 84, 27, 0.45);
+  --glass: var(--surface);
+  --glass-strong: var(--surface);
+  --sidebar-selected: var(--surface-2);
+  --chrome-tint: transparent;
+  --selected: rgba(255, 255, 255, 0.10);
 }
 
 @media (prefers-reduced-motion: reduce) {

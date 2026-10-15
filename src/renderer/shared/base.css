@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "./tokens.css";
 
+@font-face { font-family: "Manrope"; src: url("./fonts/manrope.woff2") format("woff2"); font-weight: 400 700; font-display: block; }
+
 @theme {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -10,6 +12,7 @@
   --color-text-3: var(--text-3);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
+  --color-ember: var(--ember);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
@@ -21,9 +24,10 @@ html, body, #root { height: 100%; margin: 0; }
 body {
   font-family: var(--font-ui);
   font-size: 13px;
+  font-feature-settings: "cv11";
   line-height: 1.4;
   color: var(--text);
-  background: transparent; /* vibrancy shows through; content areas paint var(--bg) */
+  background: var(--bg); /* solid surfaces, like the website */
   -webkit-font-smoothing: antialiased;
   -webkit-user-select: none; user-select: none; /* interface text isn't selectable… */
   cursor: default;
@@ -39,7 +43,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tabular { font-variant-numeric: tabular-nums; }
 .scroll { overflow-y: auto; overscroll-behavior: contain; }
 .scroll::-webkit-scrollbar { width: 10px; }
-.scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+.scroll::-webkit-scrollbar-thumb { background: var(--text-3); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
 .fade-in { animation: fade-in var(--dur) var(--ease); }
 @keyframes fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

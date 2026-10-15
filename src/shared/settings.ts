@@ -16,6 +16,7 @@ const Accelerator = z.string().min(1).max(60).regex(/^[A-Za-z0-9+]+$/);
 export const SettingsSchema = z.object({
   // general
   language: z.enum(['system', 'pt-BR', 'en']).default('system'),
+  appearance: z.enum(['dark', 'light', 'system']).default('dark'), // dark matches the brand (site and app)
   launchAtLogin: z.boolean().default(false),
   dockAlways: z.boolean().default(false),
   shortcutToggle: Accelerator.default('CommandOrControl+Alt+C'),

@@ -1,9 +1,12 @@
-import { app, BrowserWindow, screen, type BrowserWindowConstructorOptions, type Rectangle } from 'electron';
+import { app, BrowserWindow, nativeTheme, screen, type BrowserWindowConstructorOptions, type Rectangle } from 'electron';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
 import { APP_NAME } from '../../shared/brand';
 
 export type SurfaceName = 'panel' | 'main' | 'settings' | 'onboarding';
+
+/** Solid window colour (matches --bg in tokens.css) so windows never flash white or show vibrancy. */
+export const windowBackground = (): string => (nativeTheme.shouldUseDarkColors ? '#080808' : '#F6F6F7');
 
 const PANEL_W = 360;
 const PANEL_H = 520;
@@ -35,7 +38,7 @@ export class WindowManager extends EventEmitter {
     return {
       show: false,
       title: APP_NAME,
-      backgroundColor: '#00000000',
+      backgroundColor: windowBackground(),
       ...extra,
       webPreferences: {
         preload: path.join(__dirname, '..', 'preload', 'app.js'),
@@ -80,8 +83,6 @@ export class WindowManager extends EventEmitter {
       fullscreenable: false,
       skipTaskbar: true,
       hiddenInMissionControl: true,
-      vibrancy: 'popover',
-      visualEffectState: 'active',
       roundedCorners: true,
       webPreferences: { backgroundThrottling: false },
     }));
@@ -153,19 +154,16 @@ export class WindowManager extends EventEmitter {
       win = new BrowserWindow(this.base({
         width: 980, height: 660, minWidth: 760, minHeight: 480,
         titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 18 },
-        vibrancy: 'sidebar', visualEffectState: 'followWindow',
       }));
     } else if (name === 'settings') {
       win = new BrowserWindow(this.base({
         width: 680, height: 560, resizable: false, minimizable: true, maximizable: false, fullscreenable: false,
         titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 16 },
-        vibrancy: 'titlebar', visualEffectState: 'followWindow',
       }));
     } else {
       win = new BrowserWindow(this.base({
         width: 620, height: 560, resizable: false, minimizable: false, maximizable: false, fullscreenable: false,
         titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 16 },
-        vibrancy: 'under-window', visualEffectState: 'followWindow',
       }));
     }
     win.once('ready-to-show', () => { win.show(); win.focus(); });
@@ -173,6 +171,11 @@ export class WindowManager extends EventEmitter {
     this.track(name, win);
     this.updateDock();
     return win;
+  }
+
+  /** After an appearance change: repaint native window backgrounds (renderers follow the state broadcast). */
+  repaint(): void {
+    for (const w of this.wins.values()) if (!w.isDestroyed()) w.setBackgroundColor(windowBackground());
   }
 
   /** Dock icon: always, or only while the main window exists. */

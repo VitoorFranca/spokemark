@@ -400,6 +400,7 @@ function schedulePermissionPoll(): void {
 app.whenReady().then(async () => {
   settings = new SettingsService(path.join(dataDir(), 'settings.json'));
   const s0 = settings.get();
+  nativeTheme.themeSource = s0.appearance;
   store = new TranscriptStore(path.join(dataDir(), 'history.sqlite'));
   store.init();
   store.persist = s0.historyEnabled;
@@ -478,7 +479,7 @@ app.whenReady().then(async () => {
   captions.on('sources', (apps: string[]) => { for (const a of apps) store.noteSourceApp(a); void updateSource(captions.sourceDetails); broadcast(); });
   captions.on('level', (db: number) => {
     if (settings.get().captionWaves) overlay.sendLevel(db);
-    for (const name of ['panel', 'onboarding'] as const) {
+    for (const name of ['panel', 'onboarding', 'main'] as const) { // main: the waves in the empty Live view
       const w = windows.get(name);
       if (w?.isVisible()) w.webContents.send(CH.level, db);
     }
@@ -486,12 +487,13 @@ app.whenReady().then(async () => {
   store.on('segment', (seg) => sendLive({ type: 'append', segment: seg }));
   store.on('changed', () => { historyRevision++; broadcast(); });
   models.on('change', () => broadcast());
-  nativeTheme.on('updated', () => broadcast());
+  nativeTheme.on('updated', () => { windows.repaint(); broadcast(); });
   screen.on('display-added', () => broadcast());
   screen.on('display-removed', () => broadcast());
 
   settings.on('change', (n: Settings, keys: (keyof Settings)[]) => {
     const has = (...k: (keyof Settings)[]) => k.some((x) => keys.includes(x));
+    if (has('appearance')) { nativeTheme.themeSource = n.appearance; windows.repaint(); }
     if (has('language')) { buildAppMenu(); overlay.editHint = t('overlay.editHint'); lastTrayState = ''; }
     if (has('captionPreset', 'captionFont', 'fontSize', 'opacity', 'maxLines', 'language', 'showSourceApp', 'captionWaves', 'translationEnabled', 'translationMode')) overlay.relayout();
     if (has('translationEnabled', 'translationTarget')) syncTranslator();
