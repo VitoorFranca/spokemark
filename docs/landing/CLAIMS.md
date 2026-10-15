@@ -168,3 +168,12 @@ From the v2 drafts:
 | scope labels `#8A91B3` on navy `#0B0E22` | 6.2 |
 
 Removed in v3: "Every byte, on your Mac" (overclaims: the model download is network traffic).
+
+## v0.3.0 update (2026-10-15)
+
+| Claim | Source |
+|---|---|
+| Version 0.3.0, released 2026-10-15, .dmg 144 MB (144,266,424 bytes) | `gh release view v0.3.0` |
+| Speaker changes are a setting of their own; one model supports them; the app says when yours doesn't; translation follows the turns | CHANGELOG 0.3.0; `src/shared/models.ts` (`TURN_MODELS`, `speakerChangesActive`); `src/main/translate/LiveTranslator.ts` (`viewSegments`) |
+| Pause keeps the last captions on screen; Stop hides them | CHANGELOG 0.3.0; `src/main/main.ts` (`pauseCaptions`, `stopCaptions`); `tests/ui/app.spec.mjs` |
+| Same look as the site, dark by default, light and system options | CHANGELOG 0.3.0; `src/shared/settings.ts` (`appearance`) |
