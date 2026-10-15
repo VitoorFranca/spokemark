@@ -3,6 +3,7 @@
 #   audiotap        (Swift, CoreAudio Process Tap)
 #   whisper-worker  (C++, whisper.cpp static + Metal)
 #   translator      (Swift, Apple Translation framework)
+#   speaker-worker  (Swift package, FluidAudio: speaker diarization on CoreML)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WHISPER_TAG="v1.9.5"
@@ -24,6 +25,10 @@ swiftc -O -target "arm64-apple-macos$MACOS_MIN" "$ROOT/native/audiotap/main.swif
 echo "==> translator (Apple Translation, macOS 26+; weak-linked so it starts on 14.2)"
 swiftc -O -parse-as-library -target "arm64-apple-macos$MACOS_MIN" -Xlinker -weak_framework -Xlinker Translation \
   "$ROOT/native/translator/main.swift" -o "$OUT/translator"
+
+echo "==> speaker-worker (FluidAudio, pinned in native/speaker-worker/Package.resolved)"
+swift build -c release --arch arm64 --package-path "$ROOT/native/speaker-worker"
+cp "$(swift build -c release --arch arm64 --package-path "$ROOT/native/speaker-worker" --show-bin-path)/speaker-worker" "$OUT/speaker-worker"
 
 echo "==> whisper-worker (whisper.cpp $WHISPER_TAG, Metal)"
 cmake -S "$ROOT/native/whisper-worker" -B "$ROOT/build/whisper-worker" \

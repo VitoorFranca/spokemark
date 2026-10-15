@@ -10,6 +10,7 @@ interface CatalogEntry { file: string; url: string; sha256: string; bytes: numbe
 const WHISPER_REV = '5359861c739e955e79d9a303bcbc70fb988958b1';
 const VAD_REV = '9ffd54a1e1ee413ddf265af9913beaf518d1639b';
 const TDRZ_REV = 'd44ba793fc67e509623a88a409723311fa677744';
+const NEMOTRON_REV = '25a90f97f254428d4b30374b76af9c74fdee8327'; // FluidInference/nemotron-3-diarization-coreml, weights ga-2026-09-23
 const hf = (repo: string, rev: string, file: string) => `https://huggingface.co/${repo}/resolve/${rev}/${file}`;
 
 /** Same pinned revisions + SHA-256 as scripts/download-models.sh. */
@@ -22,8 +23,23 @@ export const CATALOG: Record<ModelIdT | 'vad', CatalogEntry> = {
   vad: { file: VAD_MODEL_FILE, url: hf('ggml-org/whisper-vad', VAD_REV, VAD_MODEL_FILE), sha256: '2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987', bytes: 885098 },
 };
 
+/** Folder (inside modelsDir) of the speaker-change model: what speaker-worker gets as --model-dir. */
+export const SPEAKER_MODEL_DIR = 'speakers-nemotron3-low';
+const nemotron = (file: string, sha256: string, bytes: number, from = `monolithic/v2/${file}`): CatalogEntry =>
+  ({ file: path.join(SPEAKER_MODEL_DIR, file), url: hf('FluidInference/nemotron-3-diarization-coreml', NEMOTRON_REV, from), sha256, bytes });
+/** NVIDIA Nemotron 3 Diarization, `low` streaming preset, compiled for CoreML (OpenMDW 1.1). Same pins as scripts/download-models.sh. */
+export const SPEAKER_FILES: CatalogEntry[] = [
+  nemotron('learnable_sil_emb.bin', 'd4417b3c0eabdf7c47032fac2b5b5a7ee83d819a6ddda8fd8eaf74e2b5cc4ac7', 2048, 'learnable_sil_emb.bin'),
+  nemotron('Nemotron3Diarizer_low.mlmodelc/coremldata.bin', '2c2c82efc948433cb47b60aceb4917182e2e00d1d79097b8898adfd615b0c5f8', 752),
+  nemotron('Nemotron3Diarizer_low.mlmodelc/analytics/coremldata.bin', '1ec46d7392b470ebfaac473123de9e5bc62630972b01349b929bf6e48e067c6c', 243),
+  nemotron('Nemotron3Diarizer_low.mlmodelc/model.mil', '8e2ffc4ce5edf86b8a1845e5229a219ca9e8cc0e03aa4a6e7317e81cb7da2da5', 503842),
+  nemotron('Nemotron3Diarizer_low.mlmodelc/weights/weight.bin', '88307e2c51d1877de59803299354f689e70cad7f8892a197764d5f3626089495', 198617472),
+];
+export const SPEAKER_MODEL_BYTES = SPEAKER_FILES.reduce((n, f) => n + f.bytes, 0);
+
 export interface DownloadProgress { id: ModelIdT; received: number; total: number; bytesPerSec: number; phase: 'downloading' | 'verifying' }
 export type ModelStatus = { id: ModelIdT; installed: boolean; bytes: number; download: DownloadProgress | null; error: string | null };
+export type SpeakerModelStatus = { installed: boolean; bytes: number; download: Omit<DownloadProgress, 'id'> | null; error: string | null };
 
 /**
  * Downloads/removes models with progress, speed, cancellation and SHA-256
@@ -32,11 +48,52 @@ export type ModelStatus = { id: ModelIdT; installed: boolean; bytes: number; dow
 export class ModelManager extends EventEmitter {
   private active = new Map<ModelIdT, { abort: AbortController; progress: DownloadProgress }>();
   private errors = new Map<ModelIdT, string>();
+  private speaker: { abort: AbortController; progress: Omit<DownloadProgress, 'id'> } | null = null;
+  private speakerError: string | null = null;
 
   isInstalled(id: ModelIdT | 'vad'): boolean {
-    const e = CATALOG[id];
-    const p = path.join(modelsDir(), e.file);
-    return existsSync(p) && statSync(p).size === e.bytes;
+    return present(CATALOG[id]);
+  }
+
+  /** The speaker-change model (all of its files). */
+  get speakerModelInstalled(): boolean {
+    return SPEAKER_FILES.every(present);
+  }
+
+  speakerStatus(): SpeakerModelStatus {
+    return { installed: this.speakerModelInstalled, bytes: SPEAKER_MODEL_BYTES, download: this.speaker?.progress ?? null, error: this.speakerError };
+  }
+
+  async downloadSpeakerModel(): Promise<boolean> {
+    if (this.speaker) return false;
+    const abort = new AbortController();
+    const progress: Omit<DownloadProgress, 'id'> = { received: 0, total: SPEAKER_MODEL_BYTES, bytesPerSec: 0, phase: 'downloading' };
+    this.speaker = { abort, progress };
+    this.speakerError = null;
+    this.emit('change');
+    try {
+      let base = 0;
+      for (const f of SPEAKER_FILES) {
+        if (!present(f)) await this.fetchOne(f, abort.signal, (n, bps, phase) => { progress.received = base + n; progress.bytesPerSec = bps; progress.phase = phase; });
+        base += f.bytes;
+      }
+      return true;
+    } catch (e) {
+      if (!abort.signal.aborted) this.speakerError = (e as Error).message;
+      return false;
+    } finally {
+      this.speaker = null;
+      this.emit('change');
+    }
+  }
+
+  cancelSpeakerModel(): void {
+    this.speaker?.abort.abort();
+  }
+
+  removeSpeakerModel(): void {
+    rmSync(path.join(modelsDir(), SPEAKER_MODEL_DIR), { recursive: true, force: true });
+    this.emit('change');
   }
 
   /** A model is usable only together with the VAD model. */
@@ -63,8 +120,8 @@ export class ModelManager extends EventEmitter {
     this.emit('change');
     try {
       let base = 0;
-      if (!this.isInstalled('vad')) { await this.fetchOne('vad', abort.signal, (n) => { progress.received = n; }); base = CATALOG.vad.bytes; }
-      await this.fetchOne(id, abort.signal, (n, bps, phase) => { progress.received = base + n; progress.bytesPerSec = bps; progress.phase = phase; });
+      if (!this.isInstalled('vad')) { await this.fetchOne(CATALOG.vad, abort.signal, (n) => { progress.received = n; }); base = CATALOG.vad.bytes; }
+      await this.fetchOne(CATALOG[id], abort.signal, (n, bps, phase) => { progress.received = base + n; progress.bytesPerSec = bps; progress.phase = phase; });
       return true;
     } catch (e) {
       if (!abort.signal.aborted) this.errors.set(id, (e as Error).message);
@@ -84,10 +141,9 @@ export class ModelManager extends EventEmitter {
     this.emit('change');
   }
 
-  private async fetchOne(id: ModelIdT | 'vad', signal: AbortSignal, onProgress: (received: number, bps: number, phase: DownloadProgress['phase']) => void): Promise<void> {
-    const e = CATALOG[id];
-    mkdirSync(modelsDir(), { recursive: true });
+  private async fetchOne(e: CatalogEntry, signal: AbortSignal, onProgress: (received: number, bps: number, phase: DownloadProgress['phase']) => void): Promise<void> {
     const final = path.join(modelsDir(), e.file);
+    mkdirSync(path.dirname(final), { recursive: true });
     const part = `${final}.part`;
     const res = await fetch(e.url, { signal, redirect: 'follow' });
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
@@ -119,4 +175,9 @@ export class ModelManager extends EventEmitter {
       throw err;
     }
   }
+}
+
+function present(e: CatalogEntry): boolean {
+  const p = path.join(modelsDir(), e.file);
+  return existsSync(p) && statSync(p).size === e.bytes;
 }

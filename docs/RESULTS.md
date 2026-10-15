@@ -62,7 +62,26 @@ Latency on screen p50 625 ms / p95 1522 ms; WER 3.8 % over 550 words; 124 s of s
 | `kill -9` of the main process | helpers exit by themselves (stdin EOF): 0 left |
 | Model switch with the app open | same app PID; worker restarted with the new model (base.en → base.en-q5_1 → small.en → small.en-q5_1 → base.en) |
 
-## 4. Speaker changes (tinydiarize, `small.en-tdrz`)
+## 4. Speaker changes with the speaker model (Nemotron 3 Diarization, October 2026)
+
+Fed from files at real-time pace through the same modules as the app (`node dist/cli/transcribe.js --wav <file> --speakers <model dir>`): capture is replaced by the file, **nothing is played** through the speakers. `base.en`, MacBook Air M4.
+
+| Test | Result |
+|---|---|
+| 3 synthetic dialogues (`say`, 2–3 voices, 800 / 300 / 0 ms gaps, 16 turns) | **16 of 16 turns**, each at the right word, 0 false turns (tinydiarize: 0 of 16 on the same files) |
+| Same, the lines produced | identical to the reference split, e.g. `– Yes, I checked it this morning…`, `– That works for me…` |
+| Confirmed-word latency, with vs without the diarizer (p50) | d1 973 → 1045 ms, d2 896 → 997 ms, d3 855 → 936 ms (**+72 to +101 ms**) |
+| First appearance on screen (p50 / p95) | unchanged (447–524 ms / 1.0–1.5 s): held words stay visible as provisional |
+| `speaker-worker` cost, 179 s of Apollo 13 audio | 0.40 s CPU in total (≈ 0.2 % of one core), 54 MB peak memory; load 155 ms (6.6 s the first time CoreML compiles the model) |
+| Same model through FluidAudio's own CLI | same speaker segments as `speaker-worker` (parity) |
+| UI test (Playwright, dev build) | with the setting on: audiotap + whisper-worker + speaker-worker; off: the session restarts without it; 0 helpers after quit |
+
+**Known limits.**
+- Two similar synthetic male voices (Portuguese test, `say` voices Reed and Eddy) were merged into one speaker; a borderline turn in d1 flipped speaker after a different 22 → 16 kHz resampling (the model's input is sensitive to that, FluidAudio's CLI behaves the same). Synthetic voices are not real people: a consented real conversation is the next test.
+- Short interjections spoken *over* another voice: the diarizer detects them (1.34 of 1.34 s of overlap), but Whisper usually drops their words, so no line appears for them.
+- Not yet measured with real audio played through the system (the audio-playing tests run only after asking).
+
+## 4b. Speaker changes with tinydiarize (`small.en-tdrz`, the earlier path)
 
 | Test | Result |
 |---|---|

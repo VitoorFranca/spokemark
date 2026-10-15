@@ -16,6 +16,15 @@ export const ModelStatusSchema = z.object({
 });
 export type ModelStatusMsg = z.infer<typeof ModelStatusSchema>;
 
+/** The speaker-change model (speaker diarization), separate from the recognition models. */
+export const SpeakerModelStatusSchema = z.object({
+  installed: z.boolean(),
+  bytes: z.number(),
+  download: z.object({ received: z.number(), total: z.number(), bytesPerSec: z.number(), phase: z.enum(['downloading', 'verifying']) }).nullable(),
+  error: z.string().nullable(),
+});
+export type SpeakerModelStatusMsg = z.infer<typeof SpeakerModelStatusSchema>;
+
 export const StatusSchema = z.enum(['idle', 'paused', 'loading', 'listening', 'processing', 'silent', 'stopping', 'permission', 'error', 'modelMissing']);
 export type Status = z.infer<typeof StatusSchema>;
 
@@ -32,6 +41,7 @@ export const AppStateSchema = z.object({
   permission: z.enum(['granted', 'denied', 'unknown']),
   settings: SettingsSchema,
   models: z.array(ModelStatusSchema),
+  speakerModel: SpeakerModelStatusSchema,
   overlay: z.object({ visible: z.boolean(), editMode: z.boolean() }),
   displays: z.array(z.object({ id: z.string(), label: z.string() })),
   shortcutErrors: z.array(z.enum(['shortcutToggle', 'shortcutOverlay', 'shortcutEdit'])),
@@ -85,6 +95,9 @@ export const Requests = {
   'model.cancel': ModelIdSchema,
   'model.remove': ModelIdSchema,
   'model.use': ModelIdSchema,
+  'speakerModel.download': z.undefined(),
+  'speakerModel.cancel': z.undefined(),
+  'speakerModel.remove': z.undefined(),
   'permission.request': z.undefined(),
   'permission.openSettings': z.undefined(),
   'window.open': z.object({ window: z.enum(WINDOWS), tab: z.enum(SETTINGS_TABS).optional() }),

@@ -2,7 +2,7 @@ import { AppWindow, Info, Lock, LogOut, MessageSquareText, MoreHorizontal, Move,
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Command } from '../../shared/appIpc';
-import { MODELS, speakerChangesActive, TURN_MODELS } from '../../shared/models';
+import { MODELS, speakerChangesActive } from '../../shared/models';
 import '../shared/base.css';
 import { api, useAppState, useCommand, useLevel, useLive, useT } from '../shared/hooks';
 import { lastLines } from '../shared/liveReducer';
@@ -192,11 +192,11 @@ function Panel() {
             options={(installed.some((m) => m.id === s.settings.model) ? installed : [model, ...installed]).map((m) => ({ value: m.id, label: t(MODELS[m.id].label) }))}
             onChange={(v) => void api().request('model.use', v)} />
         </div>
-        {s.settings.speakerChanges && !speakerChangesActive(s.settings) && (
+        {s.settings.speakerChanges && !speakerChangesActive(s.settings, s.speakerModel.installed) && (
           <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[var(--text-2)] hover:bg-[var(--surface-hover)]"
             onClick={() => void api().request('window.open', { window: 'settings', tab: 'transcription' })}>
             <Info size={14} strokeWidth={1.75} aria-hidden className="shrink-0 text-[var(--warning)]" />
-            <span className="flex-1">{t('speakers.panelHint', { model: TURN_MODELS.map((id) => t(MODELS[id].label)).join(', ') })}</span>
+            <span className="flex-1">{t('speakers.panelHint')}</span>
           </button>
         )}
         <div className="flex items-center gap-2 px-3 h-10">

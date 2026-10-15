@@ -26,6 +26,9 @@ export class OverlayManager extends EventEmitter {
   private extra: OverlayExtra = { source: null, translation: '' };
   private saveTimer: NodeJS.Timeout | null = null;
 
+  /** The speaker-change model is installed (speaker turns then work with every model). */
+  speakerModel = false;
+
   constructor(private readonly settings: SettingsService, private readonly rendererUrl: string | null) {
     super();
     ipcMain.on(IPC.rendered, (e, raw: unknown) => {
@@ -59,7 +62,7 @@ export class OverlayManager extends EventEmitter {
     return {
       captionPreset: s.captionPreset, captionFont: s.captionFont, fontSize: s.fontSize, opacity: s.opacity, maxLines: s.maxLines,
       showSourceApp: s.showSourceApp, captionWaves: s.captionWaves, translationEnabled: s.translationEnabled, translationMode: s.translationMode,
-      speakerTurns: speakerChangesActive(s),
+      speakerTurns: speakerChangesActive(s, this.speakerModel),
     };
   }
 
@@ -76,7 +79,7 @@ export class OverlayManager extends EventEmitter {
   /** Caption lines + optional source-app header + optional translation lines. */
   private height(): number {
     const s = this.settings.get();
-    const translationLines = s.translationEnabled && s.translationMode === 'both' ? translationLineCount(s.maxLines, speakerChangesActive(s)) : 0;
+    const translationLines = s.translationEnabled && s.translationMode === 'both' ? translationLineCount(s.maxLines, speakerChangesActive(s, this.speakerModel)) : 0;
     const header = s.showSourceApp ? 34 : 0;
     return Math.round(s.fontSize * LINE_H * s.maxLines + s.fontSize * 0.86 * LINE_H * translationLines + header + 36);
   }

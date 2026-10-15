@@ -1,5 +1,5 @@
 import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, Menu, nativeImage, nativeTheme, screen, shell, Tray, type MenuItemConstructorOptions } from 'electron';
-import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { AppStateSchema, CH, Requests, type AppStateMsg, type LiveEvent, type RequestName, type Status } from '../shared/appIpc';
 import { APP_NAME } from '../shared/brand';
@@ -10,10 +10,10 @@ import { isTurn, type Word } from './asr/localAgreement';
 import type { TranscriptUpdate } from './asr/TranscriptionProvider';
 import { CaptionsController, type Indicator } from './CaptionsController';
 import { Metrics, percentile } from './metrics';
-import { ModelManager } from './models/ModelManager';
+import { ModelManager, SPEAKER_MODEL_DIR } from './models/ModelManager';
 import { killAllChildren } from './native/ChildSupervisor';
 import { OverlayManager } from './overlay/OverlayManager';
-import { dataDir, migrateLegacyDataDir } from './paths';
+import { binDir, dataDir, migrateLegacyDataDir, modelsDir } from './paths';
 import { checkPermission, PRIVACY_PANE_URL, requestPermission, type PermissionState } from './permissions';
 import { SettingsService } from './settings/SettingsService';
 import { TranscriptStore } from './store/TranscriptStore';
@@ -90,6 +90,11 @@ function errorKind(msg: string): 'model' | 'capture' | 'unknown' {
   return 'unknown';
 }
 
+/** Folder of the speaker-change model when it (and its helper) can be used. */
+function speakerModelDir(): string | null {
+  return models.speakerModelInstalled && existsSync(path.join(binDir(), 'speaker-worker')) ? path.join(modelsDir(), SPEAKER_MODEL_DIR) : null;
+}
+
 function snapshot(): AppStateMsg {
   return AppStateSchema.parse({
     lang: lang(),
@@ -104,6 +109,7 @@ function snapshot(): AppStateMsg {
     permission,
     settings: settings.get(),
     models: models.status(),
+    speakerModel: models.speakerStatus(),
     overlay: { visible: overlay.visible, editMode: overlay.isEditMode },
     displays: screen.getAllDisplays().map((d, i) => ({ id: String(d.id), label: d.label || `Display ${i + 1}` })),
     shortcutErrors,
@@ -321,6 +327,9 @@ async function handleRequest(win: BrowserWindow | undefined, name: RequestName, 
     case 'model.cancel': models.cancel(p as Settings['model']); return true;
     case 'model.remove': if (!(p === settings.get().model && snapshot().running)) models.remove(p as Settings['model']); return true;
     case 'model.use': settings.update({ model: p as Settings['model'] }); return true;
+    case 'speakerModel.download': void models.downloadSpeakerModel().then(() => broadcast()); return true;
+    case 'speakerModel.cancel': models.cancelSpeakerModel(); return true;
+    case 'speakerModel.remove': if (!(captions.turnsMode === 'diarizer' && snapshot().running)) models.removeSpeakerModel(); return true;
     case 'permission.request': permission = await requestPermission(); broadcast(); schedulePermissionPoll(); return permission;
     case 'permission.openSettings': await shell.openExternal(PRIVACY_PANE_URL); return true;
     case 'window.open': {
@@ -452,11 +461,13 @@ app.whenReady().then(async () => {
   metrics = new Metrics(E2E.metricsFile);
   captions = new CaptionsController(s0.model, { maxLines: s0.maxLines, maxCharsPerLine: 64 });
   void captions.setSpeakerChanges(s0.speakerChanges);
+  void captions.setSpeakerModel(speakerModelDir());
   windows = new WindowManager(process.env.VITE_DEV_SERVER_URL ?? null);
   windows.dockAlways = s0.dockAlways;
   windows.updateDock();
   overlay = new OverlayManager(settings, process.env.VITE_DEV_SERVER_URL ?? null);
   overlay.editHint = t('overlay.editHint');
+  overlay.speakerModel = speakerModelDir() !== null;
   overlay.create();
   permission = await checkPermission();
 
@@ -529,7 +540,12 @@ app.whenReady().then(async () => {
   });
   store.on('segment', (seg) => sendLive({ type: 'append', segment: seg }));
   store.on('changed', () => { historyRevision++; broadcast(); });
-  models.on('change', () => broadcast());
+  models.on('change', () => {
+    const dir = speakerModelDir();
+    if (overlay.speakerModel !== (dir !== null)) { overlay.speakerModel = dir !== null; overlay.relayout(); }
+    void captions.setSpeakerModel(dir);
+    broadcast();
+  });
   nativeTheme.on('updated', () => { windows.repaint(); broadcast(); });
   screen.on('display-added', () => broadcast());
   screen.on('display-removed', () => broadcast());

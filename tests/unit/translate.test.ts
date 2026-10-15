@@ -107,7 +107,7 @@ describe('matchLanguage', () => {
 });
 
 import { viewSegments } from '../../src/main/translate/LiveTranslator';
-import { speakerChangesActive, translationLineCount, TURN_MODELS } from '../../src/shared/models';
+import { speakerChangesActive, translationLineCount } from '../../src/shared/models';
 
 describe('speaker changes and translation', () => {
   it('splits the caption view into one segment per speaker; wrapped lines stay with their speaker', () => {
@@ -149,11 +149,11 @@ describe('speaker changes and translation', () => {
     expect(shown.at(-1)).toBe('Hola\n– Buenos días\n– Adiós');
   });
 
-  it('speaker changes are a setting of their own, active only with a model that supports them', () => {
-    expect(TURN_MODELS).toEqual(['small.en-tdrz']);
-    expect(speakerChangesActive({ speakerChanges: true, model: 'small.en-tdrz' })).toBe(true);
-    expect(speakerChangesActive({ speakerChanges: true, model: 'base.en' })).toBe(false);
-    expect(speakerChangesActive({ speakerChanges: false, model: 'small.en-tdrz' })).toBe(false);
+  it('speaker changes are a setting of their own: any model with the speaker model, else only tinydiarize', () => {
+    expect(speakerChangesActive({ speakerChanges: true, model: 'base.en' }, true)).toBe(true);
+    expect(speakerChangesActive({ speakerChanges: true, model: 'base.en' }, false)).toBe(false);
+    expect(speakerChangesActive({ speakerChanges: true, model: 'small.en-tdrz' }, false)).toBe(true);
+    expect(speakerChangesActive({ speakerChanges: false, model: 'small.en-tdrz' }, true)).toBe(false);
     expect(translationLineCount(2, false)).toBe(1);
     expect(translationLineCount(2, true)).toBe(2);
     expect(translationLineCount(3, true)).toBe(3);

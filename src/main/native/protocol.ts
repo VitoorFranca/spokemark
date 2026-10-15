@@ -5,6 +5,7 @@
 export const HEADER_SIZE = 24;
 export const AUDIOTAP_MAGIC = 0x5041434c; // 'LCAP'
 export const WORKER_MAGIC = 0x4b57434c; // 'LCWK'
+export const SPEAKER_MAGIC = 0x5053434c; // 'LCSP'
 export const MAX_PAYLOAD = 16 * 1024 * 1024;
 
 export interface Frame {

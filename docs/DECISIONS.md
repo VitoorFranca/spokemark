@@ -69,13 +69,19 @@ Each entry lists what was chosen, the alternatives that were discarded, and why.
 - A single isolated word with p < 0.6 dropped (measured: applause at the end of `jfk.wav` produced "Great." / "free." with p ≈ 0.55).
 - `no_context = true`; prompting with previous text off (`usePrompt: false`); no temperature fallback (bounded latency).
 
-**Speaker changes: tinydiarize** (`small.en-tdrz`, `tdrz_enable`, `whisper_full_get_segment_speaker_turn_next`).
-- A setting of its own (`speakerChanges`), not implied by the model: the worker gets `--tdrz` and the 3 s transition context only when the setting is on **and** the model supports it (`MODELS[id].turns`). Today one model does. With the setting off, the speakers model runs as a plain `small.en`. Settings written before this change keep it on if that model was selected.
+**Speaker changes: a separate speaker diarizer** (October 2026; replaces tinydiarize as the main path).
+- Three different jobs, kept apart: *recognition* (what was said: Whisper, unchanged), *diarization* (who speaks when: the new `speaker-worker`) and *source separation* (pulling overlapping voices apart: not done). Words are matched to speakers by time.
+- **Model:** NVIDIA Nemotron 3 Diarization, `low` streaming preset (1.04 s look-ahead, up to 8 speakers in order of arrival), as CoreML through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0), pinned to one commit with only its `Diarizer` trait. The 199 MB model is a separate, optional download (pinned revision + SHA-256 per file, like the Whisper models). Weights license OpenMDW 1.1.
+- **Helper:** `native/speaker-worker` (Swift package). It gets the same 16 kHz mono audio as Whisper in 100 ms frames and answers with runs of 10 ms frames: strongest speaker (or nobody) and an overlap flag. It never downloads anything (the app passes the model folder) and keeps no state beyond the process: speakers are numbered per session and forgotten when it ends. No voice data is stored anywhere.
+- **Attribution** (`src/main/speakers/SpeakerAttributor.ts`): a word goes to the voice heard most over the word, from its start, for at most 0.6 s; silence does not vote, and a word with no voice inside goes to the first voice right after it. Why: whisper.cpp words are contiguous (each starts where the previous ended), so a word's start can stretch back into the pause or into the previous speaker's last syllable, and the last word before a pause can end up to 0.8 s into the silence. Each fix came from a measured case on the dialogues (`Yes,` 2.71 s vs the voice at 3.16 s; `That` 7.12 s vs 7.46 s).
+- **Holding:** a confirmed word whose audio is not diarized yet waits (shown as provisional, so nothing disappears from screen) until the timeline covers it, at most 1.5 s, or 2 s by a timer if the diarizer stalls; then it goes without a judgement. A failed or missing helper never stops the captions: they continue without speaker changes.
+- **Overlap:** words go to the strongest voice. Whisper usually drops short interjections spoken over someone else, and re-transcribing the overlapped crop produced invented text, so nothing is invented for them.
+- A setting of its own (`speakerChanges`). It works with every recognition model when the speaker model is installed. Without it, the older tinydiarize path (`small.en-tdrz`, `--tdrz` + 3 s transition context) still works with that one model, so nobody loses the feature on update.
+- **Discarded:** Sortformer (16/19 utterances on the test dialogues, spurious speakers), LS-EEND (11/19), pyannote streaming (vendor-reported 38–53 % DER), sherpa-onnx (offline only, adds ONNX Runtime), Apple SpeechAnalyzer (no diarization), speaker-embedding clustering (WeSpeaker/3D-Speaker via ONNX: new runtime, uncertain real-time quality). Source separation deferred: no small on-device model fits the latency and resource budget.
 - Translation follows the turns: the caption view is split into one segment per speaker (a line starting with "–"), each segment is translated and cached on its own, and the overlay shows one translation line per speaker.
-- The turn is a pseudo-token that goes through LocalAgreement (counts only once confirmed) and starts a new line with "–".
+- The turn is a pseudo-token (`TURN_TEXT`) that starts a new line with "–". With the diarizer it is inserted after LocalAgreement confirms the words; with tinydiarize it goes through LocalAgreement itself.
 - Marks the change only; does not identify who is speaking.
-- **Transition context:** after a pause, the next window re-sends the last 3 s of the previous utterance (`turnContextS`) so the model sees both voices; repeated words are removed by text alignment. Apollo 13 audio: 1–2 of 21 turns without context, 11–12 with it; cost ≈ +0.4 s p50 first appearance.
-- Discarded: speaker-embedding diarization (WeSpeaker/3D-Speaker via ONNX) — new native dependency, uncertain real-time quality.
+- **tinydiarize transition context:** after a pause, the next window re-sends the last 3 s of the previous utterance (`turnContextS`) so the model sees both voices; repeated words are removed by text alignment. Apollo 13 audio: 1–2 of 21 turns without context, 11–12 with it; cost ≈ +0.4 s p50 first appearance.
 
 ## Translation
 
@@ -114,4 +120,4 @@ Each entry lists what was chosen, the alternatives that were discarded, and why.
 
 - **Runtime (bundled):** `react`, `react-dom`, `zod`, `lucide-react`.
 - **Dev:** `electron`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite`, `typescript`, `esbuild`, `vitest`, `@playwright/test`, `@electron/packager`, `@types/*`.
-- **Native (no N-API addons):** whisper.cpp v1.9.5 built from source in `vendor/`; CoreAudio/AudioToolbox/AppKit (system); `cmake` (build only); `potrace` (only to regenerate brand SVGs).
+- **Native (no N-API addons):** whisper.cpp v1.9.5 built from source in `vendor/`; FluidAudio (Swift package, pinned commit, `Diarizer` trait only) for `speaker-worker`, licenses shipped in the app (`Resources/licenses`); CoreAudio/AudioToolbox/AppKit (system); `cmake` (build only); `potrace` (only to regenerate brand SVGs).
