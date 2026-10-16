@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Three recognition engines** (Settings › Transcription › Recognition engine): **Parakeet** (NVIDIA Nemotron Speech Streaming on the Neural Engine, 626 MB, the new default), **Apple** (macOS 26's on-device speech recognition; macOS installs its model) and **Whisper** (as before). In our comparison Parakeet had the fewest errors (0.4 % vs 2.6 % Whisper, 3.5 % Apple), settled words fastest and used no GPU. Existing installs keep Whisper until you switch.
+
+### Changed
+- **Live translation keeps up.** It now translates the transcript sentence by sentence instead of re-translating the lines on screen: a finished sentence is translated once and shows up about 0.3 s later (before: often 2–3.5 s, and long sentences that scrolled off were never shown whole). Only the sentence in progress is updated while it grows.
+- **Speaker changes work with every speech model.** A separate speaker model (NVIDIA Nemotron 3 Diarization, 199 MB, downloaded from Settings › Transcription) listens to the same audio and tells voices apart on the Neural Engine; each confirmed word goes to the voice heard over it, and a new line with a dash starts when the voice changes. On test dialogues it found every change at the right word, where the previous model found none. Captions appear on screen as fast as before; confirmed words settle about 0.1 s later. Nothing about voices is saved: speakers are told apart only within a session. The *Enhanced · speakers* model keeps working as before when the speaker model isn't installed.
+- **Translation under each speaker.** With speaker changes and "original + translation", each speaker's line is followed right away by its translation, instead of all translations in a block below.
+
 ## [0.3.0] - 2026-10-15
 
 ### Fixed

@@ -28,7 +28,7 @@ function ResizeHandle() {
 function App() {
   const [view, setView] = useState<SubtitleViewMsg>({ version: 0, lines: [] });
   const [ap, setAp] = useState<Appearance | null>(null);
-  const [extra, setExtra] = useState<OverlayExtra>({ source: null, translation: '' });
+  const [extra, setExtra] = useState<OverlayExtra>({ source: null, translation: '', pairs: [] });
   const level = useRef(-90); // read by the waves' animation loop, no re-render per sample
 
   useEffect(() => {
@@ -55,7 +55,7 @@ function App() {
   return (
     <div className={`relative flex h-full w-full items-end justify-center ${ap.editMode ? 'drag' : ''}`}>
       <div className="relative w-full transition-opacity duration-300" style={{ opacity: showBox ? 1 : 0 }}>
-        <CaptionBox look={ap} lines={view.lines} source={extra.source} translation={extra.translation} translationEnabled={ap.translationEnabled}
+        <CaptionBox look={ap} lines={view.lines} source={extra.source} translation={extra.translation} pairs={extra.pairs} translationEnabled={ap.translationEnabled}
           translationMode={ap.translationMode} speakerTurns={ap.speakerTurns} showSourceApp={ap.showSourceApp} waves={ap.captionWaves} level={level}>
           {ap.status === 'error' && !hasText ? (
             <div style={{ fontSize: '0.55em', color: '#FFB4A8' }}>{ap.statusText}</div>

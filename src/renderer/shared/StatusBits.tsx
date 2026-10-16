@@ -1,7 +1,8 @@
 // Pieces shared by panel, main window and onboarding.
 import { Download, X } from 'lucide-react';
-import type { AppStateMsg, ModelStatusMsg, Status } from '../../shared/appIpc';
+import type { AppStateMsg, ModelStatusMsg, SpeakerModelStatusMsg, Status } from '../../shared/appIpc';
 import type { StringKey } from '../../shared/i18n';
+import { VAD_BYTES } from '../../shared/models';
 import { formatMB, formatSpeed } from './format';
 import { api } from './hooks';
 import { Button, ProgressBar, cx } from './ui';
@@ -35,12 +36,52 @@ export function LevelMeter({ db, active, label }: { db: number; active: boolean;
 
 /** Model download card / row content with progress, speed and cancel. */
 export function ModelDownload({ model, t, compact }: { model: ModelStatusMsg; t: T; compact?: boolean }) {
-  const d = model.download;
+  return <Download_ status={model} t={t} compact={compact} start={() => void api().request('model.download', model.id)} cancel={() => void api().request('model.cancel', model.id)} />;
+}
+
+/** Bytes to download before the chosen engine can start (0 for Apple's: macOS installs it). */
+export function engineSetupBytes(s: AppStateMsg): number {
+  if (s.settings.engine === 'parakeet') return s.engines.parakeet.bytes;
+  if (s.settings.engine === 'apple') return 0;
+  return currentModel(s).bytes + (s.vadInstalled ? 0 : VAD_BYTES);
+}
+
+/** What the chosen engine needs before it can start: the Whisper model, the Parakeet model or Apple's. */
+export function EngineSetup({ s, t, compact }: { s: AppStateMsg; t: T; compact?: boolean }) {
+  const e = s.settings.engine;
+  if (e === 'whisper') return <ModelDownload model={currentModel(s)} t={t} compact={compact} />;
+  if (e === 'parakeet') {
+    const m = s.engines.parakeet;
+    return <Download_ status={m} t={t} compact={compact} label={`${t('action.downloadModel')} · ${formatMB(m.bytes)}`}
+      start={() => void api().request('engine.prepare', 'parakeet')} cancel={() => void api().request('engine.cancel')} />;
+  }
+  const a = s.engines.apple;
+  if (!a.supported) return <p className="text-[12px] text-[var(--text-2)]">{t('engine.needsMac26')}</p>;
+  if (a.installing) return <div className="w-full"><ProgressBar value={a.installing.fraction} label={t('engine.install')} /><p className="mt-1 text-[12px] text-[var(--text-2)] tabular" aria-live="polite">{t('engine.installing', { pct: Math.round(a.installing.fraction * 100) })}</p></div>;
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="primary" icon={Download} onClick={() => void api().request('engine.prepare', 'apple')}>{a.error ? t('action.retry') : t('engine.install')}</Button>
+      {a.error && <span className="text-[12px] text-[var(--danger)]" title={a.error}>{t('model.downloadFailed')}</span>}
+    </div>
+  );
+}
+
+/** The same for the speaker-change model. */
+export function SpeakerModelDownload({ model, t, compact }: { model: SpeakerModelStatusMsg; t: T; compact?: boolean }) {
+  return <Download_ status={model} t={t} compact={compact} label={t('speakers.download', { size: formatMB(model.bytes) })}
+    start={() => void api().request('speakerModel.download')} cancel={() => void api().request('speakerModel.cancel')} />;
+}
+
+function Download_({ status, t, compact, label, start, cancel }: {
+  status: { download: { received: number; total: number; bytesPerSec: number; phase: 'downloading' | 'verifying' } | null; error: string | null };
+  t: T; compact?: boolean; label?: string; start: () => void; cancel: () => void;
+}) {
+  const d = status.download;
   if (!d) {
     return (
       <div className={cx('flex items-center gap-2', compact ? '' : 'flex-wrap')}>
-        <Button variant="primary" icon={Download} onClick={() => void api().request('model.download', model.id)}>{model.error ? t('action.retry') : t('action.downloadModel')}</Button>
-        {model.error && <span className="text-[12px] text-[var(--danger)]" title={model.error}>{t('model.downloadFailed')}</span>}
+        <Button variant="primary" icon={Download} onClick={start}>{status.error ? t('action.retry') : label ?? t('action.downloadModel')}</Button>
+        {status.error && <span className="text-[12px] text-[var(--danger)]" title={status.error}>{t('model.downloadFailed')}</span>}
       </div>
     );
   }
@@ -48,8 +89,8 @@ export function ModelDownload({ model, t, compact }: { model: ModelStatusMsg; t:
   return (
     <div className="w-full">
       <div className="flex items-center gap-2">
-        <div className="flex-1"><ProgressBar value={pct} label={t('action.downloadModel')} /></div>
-        <button type="button" aria-label={t('action.cancel')} title={t('action.cancel')} onClick={() => void api().request('model.cancel', model.id)} className="rounded-full p-0.5 text-[var(--text-2)] hover:bg-[var(--surface-hover)]"><X size={14} strokeWidth={2} /></button>
+        <div className="flex-1"><ProgressBar value={pct} label={label ?? t('action.downloadModel')} /></div>
+        <button type="button" aria-label={t('action.cancel')} title={t('action.cancel')} onClick={cancel} className="rounded-full p-0.5 text-[var(--text-2)] hover:bg-[var(--surface-hover)]"><X size={14} strokeWidth={2} /></button>
       </div>
       <p className="mt-1 text-[12px] text-[var(--text-2)] tabular" aria-live="polite">
         {d.phase === 'verifying' ? t('model.verifying') : t('model.downloading', { done: formatMB(d.received), total: formatMB(d.total), speed: d.bytesPerSec > 0 ? formatSpeed(d.bytesPerSec) : '—' })}

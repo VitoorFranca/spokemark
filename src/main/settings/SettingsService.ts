@@ -23,6 +23,8 @@ export class SettingsService extends EventEmitter {
       const raw = JSON.parse(readFileSync(this.file, 'utf8')) as Record<string, unknown>;
       // Up to 0.2.0 speaker changes came with the model: keep them on for people who chose it.
       if (!('speakerChanges' in raw) && raw.model === 'small.en-tdrz') raw.speakerChanges = true;
+      // Up to 0.3.0 Whisper was the only engine: keep it (and its downloaded model) for existing installs.
+      if (!('engine' in raw)) raw.engine = 'whisper';
       const parsed = SettingsSchema.safeParse(raw);
       if (parsed.success) return parsed.data;
       // Keep whatever is still valid (e.g. after a schema change) instead of resetting everything.

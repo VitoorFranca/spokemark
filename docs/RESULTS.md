@@ -34,6 +34,27 @@ With timestamp-only dedup (the first version) the same reference had a WER of 5.
 
 **Offline inference per model** (10 s window, median of 5, no playback): base.en-q5_1 149 ms, base.en 159 ms, small.en-q5_1 388 ms, small.en 430 ms. The portable release build (`GGML_NATIVE=OFF`, built on the GitHub runner) measured 160 ms for base.en.
 
+## 2b. Recognition engines compared (October 2026)
+
+Each file was fed through the app's pipeline at real-time pace (`dist/cli/transcribe.js --wav … --engine …`), **nothing was played**; the engines took turns file by file. MacBook Air M4. Whisper = `base.en` (the default before), Apple = `SpeechTranscriber` en-US (macOS 26.6), Parakeet = Nemotron Speech Streaming 0.6B, 560 ms chunks. The three dialogues ran with speaker changes on.
+
+| | Whisper | Apple | **Parakeet** |
+|---|---|---|---|
+| Word errors (WER), 9 files, 460 words | 2.6 % | 3.5 % | **0.4 %** |
+| Something on screen at a word, p50 / p95 (median over files) | **0.18 s** / 0.85 s | 0.68 s / 1.03 s | 0.44 s / **0.59 s** |
+| Word final (confirmed), p50 / p95 | 0.91 s / 1.55 s | 2.67 s / 6.72 s | **0.72 s / 1.12 s** |
+| Words in 60 s of room noise | 0 | 0 | 0 |
+| Speaker changes found on d1/d2/d3 (5/6/5) | 4/6/5 | 4/6/5 | 4/6/5 |
+| CPU, 179 s of Apollo 13 (helper) | 18.2 s (10.2 % of a core) | 1.5 s own + 5.4 s billed to it by system services (≈ 3.8 %) | 8.0 s (4.5 %) |
+| GPU (Metal time) | 31.9 s (≈ 18 %) | 0 | 0 |
+| Memory | 320 MB | 6 MB (the model lives in macOS) | 76 MB + 570 MB on the Neural Engine |
+| Download | 148 MB (+ 0.9 MB VAD) | none (macOS installs it) | 626 MB |
+
+- "Something on screen" is engine-neutral: the first time any text showed at a word's position, against the end of that word's audio by its final time (Apple's provisional words have no times of their own).
+- The missed d1 change is the same borderline diarizer case for all three engines (the last "Thanks."), not recognition.
+- Load: Parakeet compiles for the Neural Engine once (13 s the first time, then 0.5 s); Apple 0.1 s.
+- Limits: synthetic voices plus one real recording (JFK); the CPU numbers include whatever else the Mac was doing in the background only through the helper's own process. Not yet measured with audio played through the system.
+
 ## 3. Packaged app
 
 Latency here is from the capture of a word's last sample to the **overlay painted** (the renderer acknowledges after `requestAnimationFrame`).
@@ -62,7 +83,43 @@ Latency on screen p50 625 ms / p95 1522 ms; WER 3.8 % over 550 words; 124 s of s
 | `kill -9` of the main process | helpers exit by themselves (stdin EOF): 0 left |
 | Model switch with the app open | same app PID; worker restarted with the new model (base.en → base.en-q5_1 → small.en → small.en-q5_1 → base.en) |
 
-## 4. Speaker changes (tinydiarize, `small.en-tdrz`)
+## 4. Speaker changes with the speaker model (Nemotron 3 Diarization, October 2026)
+
+Fed from files at real-time pace through the same modules as the app (`node dist/cli/transcribe.js --wav <file> --speakers <model dir>`): capture is replaced by the file, **nothing is played** through the speakers. `base.en`, MacBook Air M4.
+
+| Test | Result |
+|---|---|
+| 3 synthetic dialogues (`say`, 2–3 voices, 800 / 300 / 0 ms gaps, 16 turns) | **16 of 16 turns**, each at the right word, 0 false turns (tinydiarize: 0 of 16 on the same files) |
+| Same, the lines produced | identical to the reference split, e.g. `– Yes, I checked it this morning…`, `– That works for me…` |
+| Confirmed-word latency, with vs without the diarizer (p50) | d1 973 → 1045 ms, d2 896 → 997 ms, d3 855 → 936 ms (**+72 to +101 ms**) |
+| First appearance on screen (p50 / p95) | unchanged (447–524 ms / 1.0–1.5 s): held words stay visible as provisional |
+| `speaker-worker` cost, 179 s of Apollo 13 audio | 0.40 s CPU in total (≈ 0.2 % of one core), 54 MB peak memory; load 155 ms (6.6 s the first time CoreML compiles the model) |
+| Same model through FluidAudio's own CLI | same speaker segments as `speaker-worker` (parity) |
+| UI test (Playwright, dev build) | with the setting on: audiotap + whisper-worker + speaker-worker; off: the session restarts without it; 0 helpers after quit |
+
+**Live, played through the system output** (`scripts/e2e-transcribe.sh … --speakers <dir>`, real Process Tap capture, after the punctuation and near-tie rules below):
+
+| Test | Result |
+|---|---|
+| 2 rounds × 3 dialogues (32 speaker changes) | **32 of 32 detected, 0 false**; 28 at the exact word, 4 off by 1–3 words (all in one round) |
+| Why the 4 misses | Whisper's word times in that round were off by up to 0.6 s (e.g. `table,` 13.71 s vs 13.23 s in the other round), while the diarizer's change points were the same in both rounds (±20 ms) |
+| Confirmed-word latency p50 | 1.02–1.15 s with the diarizer; 0.86–1.04 s without (same dialogues, live) |
+| First appearance p50 | 0.49–0.66 s with, 0.49–0.56 s without |
+| WER | same range with and without the diarizer (0–11 % with, 0–8 % without across rounds); the variation comes from recognition (e.g. `Okay, a ticket for that` also without the diarizer) |
+| UI tests with audio (`E2E_AUDIO=1`) | 7 of 7 passed |
+
+Rules added from these runs (each has a unit test with the measured times):
+- a near tie inside a word (< 50 ms) goes to the voice that starts later (`of` 60 vs 40 ms at a gap-0 change);
+- across a pause (≥ 0.15 s), a turn is not put right before the word that ends a sentence (`budget is | tight.` with `tight.` timed inside the next voice);
+- a voiceless word right after a sentence end goes to the first voice within 0.5 s (`year. I | would`).
+
+Next step for the remaining misses: more accurate word times from whisper.cpp (DTW token timestamps), a change in `whisper-worker`.
+
+**Known limits.**
+- Two similar synthetic male voices (Portuguese test, `say` voices Reed and Eddy) were merged into one speaker; a borderline turn in d1 flipped speaker after a different 22 → 16 kHz resampling (the model's input is sensitive to that, FluidAudio's CLI behaves the same). Synthetic voices are not real people: a consented real conversation is the next test.
+- Short interjections spoken *over* another voice: the diarizer detects them (1.34 of 1.34 s of overlap), but Whisper usually drops their words, so no line appears for them.
+
+## 4b. Speaker changes with tinydiarize (`small.en-tdrz`, the earlier path)
 
 | Test | Result |
 |---|---|

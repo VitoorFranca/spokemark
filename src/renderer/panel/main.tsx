@@ -2,11 +2,12 @@ import { AppWindow, Info, Lock, LogOut, MessageSquareText, MoreHorizontal, Move,
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Command } from '../../shared/appIpc';
-import { MODELS, speakerChangesActive, TURN_MODELS } from '../../shared/models';
+import { MODELS, speakerChangesActive } from '../../shared/models';
+import { ENGINES } from '../../shared/engines';
 import '../shared/base.css';
 import { api, useAppState, useCommand, useLevel, useLive, useT } from '../shared/hooks';
 import { lastLines } from '../shared/liveReducer';
-import { currentModel, LevelMeter, ModelDownload, statusLabel, StatusDot } from '../shared/StatusBits';
+import { currentModel, EngineSetup, engineSetupBytes, LevelMeter, statusLabel, StatusDot } from '../shared/StatusBits';
 import { WaveBackdrop } from '../shared/WaveBackdrop';
 import { Button, Card, cx, IconButton, Kbd, Segmented, Select, Toggle } from '../shared/ui';
 import { formatMB } from '../shared/format';
@@ -136,8 +137,8 @@ function Panel() {
       {st === 'modelMissing' && (
         <Card tone="accent" className="p-3 fade-in">
           <p className="text-[13px] font-semibold">{t('model.missingTitle')}</p>
-          <p className="mt-0.5 mb-2 text-[12px] text-[var(--text-2)]">{t('model.missingBody', { size: formatMB(model.bytes + (s.vadInstalled ? 0 : VAD_BYTES)) })}</p>
-          <ModelDownload model={model} t={t} />
+          <p className="mt-0.5 mb-2 text-[12px] text-[var(--text-2)]">{s.settings.engine === 'apple' ? t('model.missingBodyApple') : t('model.missingBody', { size: formatMB(engineSetupBytes(s)) })}</p>
+          <EngineSetup s={s} t={t} />
         </Card>
       )}
       {st === 'error' && (
@@ -148,7 +149,7 @@ function Panel() {
               <p className="text-[13px] font-semibold">{t('state.error')}</p>
               <p className="mt-0.5 text-[12px] text-[var(--text-2)]" title={s.errorMessage ?? undefined}>{t(s.errorKind === 'model' ? 'error.model' : s.errorKind === 'capture' ? 'error.capture' : 'error.generic')}</p>
               {s.errorKind === 'model'
-                ? <Button className="mt-2" size="sm" variant="primary" onClick={() => void api().request('model.download', s.settings.model)}>{t('action.redownload')}</Button>
+                ? <Button className="mt-2" size="sm" variant="primary" onClick={() => void (s.settings.engine === 'whisper' ? api().request('model.download', s.settings.model) : api().request('engine.prepare', s.settings.engine))}>{t('action.redownload')}</Button>
                 : <Button className="mt-2" size="sm" onClick={() => void api().request('captions.toggle')}>{t('action.retry')}</Button>}
             </div>
           </div>
@@ -188,15 +189,17 @@ function Panel() {
         )}
         <div className="flex items-center gap-2 px-3 h-10">
           <span className="flex-1 text-[13px]">{t('panel.model')}</span>
-          <Select label={t('panel.model')} value={s.settings.model} className="w-[150px]"
-            options={(installed.some((m) => m.id === s.settings.model) ? installed : [model, ...installed]).map((m) => ({ value: m.id, label: t(MODELS[m.id].label) }))}
-            onChange={(v) => void api().request('model.use', v)} />
+          {s.settings.engine === 'whisper'
+            ? <Select label={t('panel.model')} value={s.settings.model} className="w-[150px]"
+              options={(installed.some((m) => m.id === s.settings.model) ? installed : [model, ...installed]).map((m) => ({ value: m.id, label: t(MODELS[m.id].label) }))}
+              onChange={(v) => void api().request('model.use', v)} />
+            : <span className="text-[13px] text-[var(--text-2)]">{t(ENGINES[s.settings.engine].label)}</span>}
         </div>
-        {s.settings.speakerChanges && !speakerChangesActive(s.settings) && (
+        {s.settings.speakerChanges && !speakerChangesActive(s.settings, s.speakerModel.installed) && (
           <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[var(--text-2)] hover:bg-[var(--surface-hover)]"
             onClick={() => void api().request('window.open', { window: 'settings', tab: 'transcription' })}>
             <Info size={14} strokeWidth={1.75} aria-hidden className="shrink-0 text-[var(--warning)]" />
-            <span className="flex-1">{t('speakers.panelHint', { model: TURN_MODELS.map((id) => t(MODELS[id].label)).join(', ') })}</span>
+            <span className="flex-1">{t('speakers.panelHint')}</span>
           </button>
         )}
         <div className="flex items-center gap-2 px-3 h-10">

@@ -1,16 +1,27 @@
 // Headless harness: system audio (audiotap) -> pipeline -> VAD -> whisper -> subtitles.
 // Used for the Phase 2 gate and benchmarks. Same modules as the Electron app.
 // Usage: node dist/cli/transcribe.js --model base.en --seconds 30 --out run.json
+//        --wav file.wav       feed a file at real-time pace instead of capturing (nothing is played)
+//        --speakers <dir>     mark speaker changes with speaker-worker (the speaker model folder)
+//        --engine whisper|apple|parakeet   recognition engine (default whisper)
+//        --translate <lang>   live translation as in the overlay; reports how long each finished
+//                             sentence took to show translated
 import { readFileSync, writeFileSync } from 'node:fs';
 import { wer } from '../shared/wer';
 import { TURN_TEXT } from '../main/asr/localAgreement';
+import { SpeakerAttributor, type SpeakerSpan } from '../main/speakers/SpeakerAttributor';
+import { SpeakerWorkerClient } from '../main/speakers/SpeakerWorkerClient';
 import path from 'node:path';
 import { AudioCaptureService, type CaptureFormat, type CaptureStatus } from '../main/audio/AudioCaptureService';
 import { AudioProcessingPipeline } from '../main/audio/AudioProcessingPipeline';
 import type { TranscriptUpdate } from '../main/asr/TranscriptionProvider';
+import { StreamingEngineProvider } from '../main/asr/StreamingEngineProvider';
 import { DEFAULT_WHISPER_OPTIONS, WhisperProvider } from '../main/asr/WhisperProvider';
-import { binDir, modelPath, vadModelPath, type ModelId } from '../main/paths';
+import { PARAKEET_MODEL_DIR } from '../main/models/ModelManager';
+import { binDir, modelPath, modelsDir, vadModelPath, type ModelId } from '../main/paths';
 import { SubtitleManager } from '../main/subtitles/SubtitleManager';
+import { SentenceTranslator } from '../main/translate/SentenceTranslator';
+import { TranslatorService } from '../main/translate/TranslatorService';
 
 const args = process.argv.slice(2);
 const arg = (k: string, d: string) => { const i = args.indexOf(`--${k}`); return i >= 0 ? args[i + 1]! : d; };
@@ -20,13 +31,17 @@ const out = arg('out', '');
 const stepMs = Number(arg('step', String(DEFAULT_WHISPER_OPTIONS.stepMs)));
 const usePrompt = arg('prompt', '0') === '1';
 const ref = arg('ref', '');
+const wavFile = arg('wav', '');
+const speakerDir = arg('speakers', '');
+const engine = arg('engine', 'whisper');
+const translateTo = arg('translate', '');
 
 const t0 = process.hrtime.bigint();
 const ms = (ns: bigint) => Number(ns - t0) / 1e6;
 
 const capture = new AudioCaptureService(path.join(binDir(), 'audiotap'));
 const pipeline = new AudioProcessingPipeline(60);
-const provider = new WhisperProvider(pipeline.ring, {
+const whisper = engine !== 'whisper' ? null : new WhisperProvider(pipeline.ring, {
   ...DEFAULT_WHISPER_OPTIONS,
   stepMs,
   usePrompt,
@@ -36,12 +51,39 @@ const provider = new WhisperProvider(pipeline.ring, {
   modelPath: modelPath(model),
   vadModelPath: vadModelPath(),
 });
-const subs = new SubtitleManager({ maxCharsPerLine: 60, maxLines: 3 });
+const provider = whisper ?? new StreamingEngineProvider(engine === 'apple'
+  ? { name: 'speech-worker', binPath: path.join(binDir(), 'speech-worker'), args: [] }
+  : { name: 'parakeet-worker', binPath: path.join(binDir(), 'parakeet-worker'), args: ['--model-dir', path.join(modelsDir(), PARAKEET_MODEL_DIR)] });
+// a file run keeps every line for the summary, unless it measures translation (then like the overlay: 3 lines of 64)
+const subs = new SubtitleManager({ maxCharsPerLine: 64, maxLines: wavFile && !translateTo ? 500 : 3 });
+const speakers = speakerDir ? new SpeakerWorkerClient(path.join(binDir(), 'speaker-worker'), speakerDir) : null;
+const attributor = speakers ? new SpeakerAttributor() : null;
+const speakerSpans: SpeakerSpan[] = [];
+// Translation timing: a sentence is "done" when its last word is confirmed; it is "translated"
+// when the overlay's pairs first hold a source containing it.
+const translatorSvc = translateTo ? new TranslatorService() : null;
+const live = translatorSvc ? new SentenceTranslator((t, l) => translatorSvc.translate(t, l), translateTo) : null;
+const sentences: { text: string; doneNs: bigint; shownNs: bigint | null }[] = [];
+let sentence: string[] = [];
+const norm = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trim();
+live?.on('translation', (t: { pairs: { source: string; text: string }[] }) => {
+  const now = process.hrtime.bigint();
+  const srcs = t.pairs.filter((p) => p.text.trim()).map((p) => norm(p.source));
+  for (const s of sentences) if (s.shownNs === null && srcs.some((x) => x.includes(norm(s.text)))) s.shownNs = now;
+});
+
 
 const events: unknown[] = [];
 const confirmedWords: { p: number; text: string; startS: number; endS: number; latencyMs: number | null; atMs: number }[] = [];
 const wordLatency: number[] = [];
 const firstSeenLatency: number[] = [];
+// Engine-neutral "on screen" latency: when did *something* first show at a word's position
+// (provisional text, possibly different), measured against the end of that word's audio
+// by its final time. Provisional word times are estimates in some engines (Apple), so
+// they are not used.
+const posFirstSeen: bigint[] = [];
+let posConfirmed = 0;
+const shownLatency: number[] = [];
 const clockSkew: number[] = [];
 
 capture.on('format', (f: CaptureFormat) => { pipeline.setFormat(f.sampleRate, f.channels); console.error(`[cli] format ${JSON.stringify(f)}`); });
@@ -53,10 +95,13 @@ capture.on('audio', (x: Float32Array, ns: bigint) => {
 capture.on('status', (s: CaptureStatus) => { if (s.event !== 'level') { console.error(`[cli] capture ${JSON.stringify(s)}`); events.push({ atMs: ms(process.hrtime.bigint()), capture: s }); } });
 capture.on('log', (l: string) => process.env.LC_VERBOSE && console.error(l));
 capture.on('fatal', (m: string) => { console.error(`[cli] capture fatal: ${m}`); process.exit(3); });
-pipeline.on('samples', (s: Float32Array, i: number) => provider.pushAudio(s, i));
+pipeline.on('samples', (s: Float32Array, i: number) => { provider.pushAudio(s, i); speakers?.push(s, i); });
+speakers?.on('log', (l: string) => console.error(l));
+speakers?.on('ready', () => { attributor!.live = true; });
+speakers?.on('spans', (sp: SpeakerSpan[]) => { speakerSpans.push(...sp); onUpdate(attributor!.addSpans(sp)); });
 provider.on('log', (l: string) => { if (process.env.LC_VERBOSE || /metal|error|fail/i.test(l)) console.error(l); });
-provider.vad.on('speech-start', (i: number) => events.push({ atMs: ms(process.hrtime.bigint()), vad: 'start', t: i / 16000 }));
-provider.vad.on('speech-end', (i: number) => events.push({ atMs: ms(process.hrtime.bigint()), vad: 'end', t: i / 16000 }));
+whisper?.vad.on('speech-start', (i: number) => events.push({ atMs: ms(process.hrtime.bigint()), vad: 'start', t: i / 16000 }));
+whisper?.vad.on('speech-end', (i: number) => events.push({ atMs: ms(process.hrtime.bigint()), vad: 'end', t: i / 16000 }));
 
 subs.on('change', (_v, newWords: { end: number }[]) => {
   const now = process.hrtime.bigint();
@@ -66,43 +111,106 @@ subs.on('change', (_v, newWords: { end: number }[]) => {
   }
 });
 
-provider.on('update', (u: TranscriptUpdate) => {
+provider.on('update', (u: TranscriptUpdate) => onUpdate(attributor ? attributor.apply(u) : u));
+
+function onUpdate(u: TranscriptUpdate | null): void {
+  if (!u) return;
   subs.apply(u);
+  live?.apply(u);
   const now = process.hrtime.bigint();
+  const real = (ws: { text: string }[]) => ws.filter((w) => w.text !== TURN_TEXT && w.text.trim());
+  const conf = real(u.confirmed), prov = real(u.provisional);
+  for (let i = 0; i < conf.length + prov.length; i++) if (posFirstSeen[posConfirmed + i] === undefined) posFirstSeen[posConfirmed + i] = now;
+  for (const w of conf as typeof u.confirmed) {
+    const c = pipeline.captureTimeOf(w.end), seen = posFirstSeen[posConfirmed++]!;
+    if (c !== null) shownLatency.push(Number(seen - c) / 1e6);
+  }
   for (const w of u.confirmed) {
+    if (live && w.text !== TURN_TEXT) {
+      sentence.push(w.text.trim());
+      if (/[.?!]["')\]]*$/.test(w.text.trim())) { sentences.push({ text: sentence.join(' '), doneNs: now, shownNs: null }); sentence = []; }
+    } else if (live) sentence = [];
     const c = pipeline.captureTimeOf(w.end);
     const lat = c !== null ? Number(now - c) / 1e6 : null;
     if (lat !== null && w.text !== TURN_TEXT) wordLatency.push(lat);
     confirmedWords.push({ p: Number(w.p.toFixed(2)), text: w.text.trim(), startS: w.start / 16000, endS: w.end / 16000, latencyMs: lat, atMs: ms(now) });
   }
-  const conf = u.confirmed.map((w) => w.text).join('').trim();
-  const prov = u.provisional.map((w) => w.text).join('').trim();
-  console.log(`${(ms(now) / 1000).toFixed(1).padStart(6)}s infer=${u.inferMs.toFixed(0)}ms ${u.utteranceEnd ? 'END ' : ''}| ${conf} \x1b[2m${prov}\x1b[0m`);
-});
+  console.log(`${(ms(now) / 1000).toFixed(1).padStart(6)}s infer=${u.inferMs.toFixed(0)}ms ${u.utteranceEnd ? 'END ' : ''}| ${u.confirmed.map((w) => w.text).join('').trim()} \x1b[2m${u.provisional.map((w) => w.text).join('').trim()}\x1b[0m`);
+}
+
+/** 16-bit PCM or 32-bit float WAV -> interleaved samples. */
+function readWav(file: string): { rate: number; channels: number; x: Float32Array } {
+  const b = readFileSync(file);
+  let off = 12, rate = 0, channels = 0, bits = 0, data: Buffer | null = null;
+  while (off + 8 <= b.length) {
+    const id = b.toString('ascii', off, off + 4), size = b.readUInt32LE(off + 4);
+    if (id === 'fmt ') { channels = b.readUInt16LE(off + 10); rate = b.readUInt32LE(off + 12); bits = b.readUInt16LE(off + 22); }
+    if (id === 'data') data = b.subarray(off + 8, off + 8 + size);
+    off += 8 + size + (size & 1);
+  }
+  if (!data || !rate || (bits !== 16 && bits !== 32)) throw new Error(`unsupported WAV: ${file}`);
+  const n = data.length / (bits / 8);
+  const x = new Float32Array(n);
+  for (let i = 0; i < n; i++) x[i] = bits === 16 ? data.readInt16LE(i * 2) / 32768 : data.readFloatLE(i * 4);
+  return { rate, channels, x };
+}
+
+/** Push a file through the pipeline in 10 ms pieces at real-time pace, then 3 s of silence. */
+async function feedWav(file: string): Promise<void> {
+  const { rate, channels, x } = readWav(file);
+  pipeline.setFormat(rate, channels);
+  const step = Math.round(rate / 100) * channels;
+  const all = new Float32Array(x.length + 3 * rate * channels);
+  all.set(x);
+  const start = Date.now();
+  for (let i = 0, k = 0; i < all.length; i += step, k++) {
+    const wait = start + k * 10 - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    pipeline.push(all.subarray(i, i + step), process.hrtime.bigint());
+  }
+}
 
 const pct = (a: number[], p: number) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor((p / 100) * s.length))]!; };
 
 async function main() {
+  if (speakers) {
+    speakers.start();
+    await new Promise<void>((r) => { speakers.once('ready', () => r()); speakers.once('down', () => r()); });
+  }
   await provider.start();
-  console.error(`[cli] whisper ready (model ${model}, metal=${provider.metalInitialized}); capturing ${seconds}s`);
-  capture.start();
-  await new Promise((r) => setTimeout(r, seconds * 1000));
-  await capture.stop();
+  if (wavFile) {
+    console.error(`[cli] ${engine} ready (model ${model}, metal=${provider.metalInitialized}); feeding ${wavFile}`);
+    await feedWav(wavFile);
+  } else {
+    console.error(`[cli] whisper ready (model ${model}, metal=${provider.metalInitialized}); capturing ${seconds}s`);
+    capture.start();
+    await new Promise((r) => setTimeout(r, seconds * 1000));
+    await capture.stop();
+  }
   // let the last inference land
   await new Promise((r) => setTimeout(r, 2500));
-  await provider.stop();
+  onUpdate(attributor?.flush() ?? null);
+  await Promise.all([provider.stop(), speakers?.stop(), translatorSvc?.stop()]);
   const summary = {
-    model, seconds, stepMs, usePrompt,
+    engine, model: engine === 'whisper' ? model : engine, seconds, stepMs, usePrompt,
     metal: provider.metalInitialized,
     transcript: confirmedWords.filter((w) => w.text !== TURN_TEXT.trim()).map((w) => w.text).join(' '),
     wer: ref ? wer(readFileSync(ref, 'utf8'), confirmedWords.filter((w) => w.text !== TURN_TEXT.trim()).map((w) => w.text).join(' ')) : undefined,
     speakerTurns: confirmedWords.filter((w) => w.text === TURN_TEXT.trim()).length,
+    lines: subs.view().lines.map((l) => l.committed),
     confirmedLatencyMs: { p50: pct(wordLatency, 50), p95: pct(wordLatency, 95), n: wordLatency.length },
     firstSeenLatencyMs: { p50: pct(firstSeenLatency, 50), p95: pct(firstSeenLatency, 95), n: firstSeenLatency.length },
+    shownLatencyMs: { p50: pct(shownLatency, 50), p95: pct(shownLatency, 95), n: shownLatency.length },
+    translation: live ? (() => {
+      const lag = sentences.filter((s) => s.shownNs !== null).map((s) => Number(s.shownNs! - s.doneNs) / 1e6);
+      return { target: translateTo, sentences: sentences.length, translated: lag.length, lagMs: { p50: pct(lag, 50), p95: pct(lag, 95), max: lag.length ? Math.max(...lag) : null }, requests: live.stats.requests,
+        missed: sentences.filter((s) => s.shownNs === null).map((s) => s.text) };
+    })() : undefined,
     inferMs: { p50: pct(provider.stats.inferMs, 50), p95: pct(provider.stats.inferMs, 95), n: provider.stats.inferMs.length },
     captureToMainMs: { p50: pct(clockSkew, 50), p95: pct(clockSkew, 95) },
-    stats: { ...provider.stats, inferMs: undefined, vadMaxInflight: provider.vad.maxInflight },
+    stats: { ...provider.stats, inferMs: undefined, vadMaxInflight: whisper?.vad.maxInflight },
     words: confirmedWords,
+    speakerSpans: speakerSpans.filter((sp) => sp.speaker >= 0).map((sp) => ({ speaker: sp.speaker, startS: sp.start / 16000, endS: sp.end / 16000, overlap: sp.overlap })),
     events,
   };
   console.error(JSON.stringify({ ...summary, words: undefined, events: undefined }, null, 1));

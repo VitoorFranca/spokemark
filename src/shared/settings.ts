@@ -1,6 +1,11 @@
 // Settings schema shared by main (source of truth) and renderers (forms).
 import { z } from 'zod';
 
+/** Speech recognition engines: whisper.cpp (Metal), Apple SpeechAnalyzer (macOS 26+), Parakeet (Nemotron Speech Streaming, CoreML). */
+export const ENGINE_IDS = ['whisper', 'apple', 'parakeet'] as const;
+export const EngineIdSchema = z.enum(ENGINE_IDS);
+export type EngineId = z.infer<typeof EngineIdSchema>;
+
 export const MODEL_IDS = ['base.en', 'base.en-q5_1', 'small.en', 'small.en-q5_1', 'small.en-tdrz'] as const;
 export const ModelIdSchema = z.enum(MODEL_IDS);
 export type ModelIdT = z.infer<typeof ModelIdSchema>;
@@ -24,7 +29,10 @@ export const SettingsSchema = z.object({
   shortcutEdit: Accelerator.default('CommandOrControl+Alt+E'),
   onboardingDone: z.boolean().default(false),
   // captions
-  model: ModelIdSchema.default('base.en'),
+  // Parakeet: most accurate and fastest to settle in the October 2026 comparison (docs/RESULTS.md).
+  // Installs from before engines existed keep Whisper (SettingsService migration).
+  engine: EngineIdSchema.default('parakeet'),
+  model: ModelIdSchema.default('base.en'), // the Whisper model (engine 'whisper')
   /** Mark speaker changes. Independent of the model: it only takes effect with a model that supports it (MODELS[id].turns). */
   speakerChanges: z.boolean().default(false),
   captionPreset: z.enum(CAPTION_PRESETS).default('default'),

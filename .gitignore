@@ -2,6 +2,7 @@ node_modules/
 dist/
 release/
 vendor/
+native/fluid-workers/.build/
 build/*
 !build/macos/
 *.part

@@ -4,14 +4,15 @@ import { createRoot } from 'react-dom/client';
 import { SETTINGS_TABS, type AppStateMsg, type Command } from '../../shared/appIpc';
 import { APP_NAME } from '../../shared/brand';
 import { LANG_NAMES } from '../../shared/i18n';
-import { MODELS, speakerChangesActive, TURN_MODELS } from '../../shared/models';
+import { MODELS, speakerChangesActive } from '../../shared/models';
 import { matchLanguage } from '../../shared/lang';
-import { CAPTION_FONTS, CAPTION_PRESETS, MODEL_IDS, type Settings } from '../../shared/settings';
+import { CAPTION_FONTS, CAPTION_PRESETS, ENGINE_IDS, MODEL_IDS, type EngineId, type Settings } from '../../shared/settings';
+import { ENGINES } from '../../shared/engines';
 import '../shared/base.css';
 import { CaptionBox, type CaptionLine } from '../shared/CaptionBox';
 import { formatMB } from '../shared/format';
 import { api, useAppState, useCommand, useT } from '../shared/hooks';
-import { ModelDownload } from '../shared/StatusBits';
+import { EngineSetup, ModelDownload, SpeakerModelDownload } from '../shared/StatusBits';
 import { Badge, Button, Card, cx, Kbd, ListRow, Section, Segmented, Select, Slider, Toggle, ToolbarTab } from '../shared/ui';
 import { WaveBackdrop } from '../shared/WaveBackdrop';
 
@@ -223,35 +224,74 @@ function Rating({ label, value }: { label: string; value: string }) {
   return <span className="text-[12px] text-[var(--text-2)]">{label}: <span className="text-[var(--text)]">{value}</span></span>;
 }
 
-/** Speaker changes: a setting of its own, independent of the model; only some models can honour it. */
+/**
+ * Speaker changes: a setting of its own. They come from the speaker model (speaker
+ * diarization, works with every speech model); without it, only the tinydiarize model can mark them.
+ */
 function SpeakersSection({ s, t }: { s: AppStateMsg; t: T }) {
   const st = s.settings;
-  const capable = TURN_MODELS[0]!;
-  const capableName = TURN_MODELS.map((id) => t(MODELS[id].label)).join(', ');
-  const capableStatus = s.models.find((m) => m.id === capable)!;
-  const active = speakerChangesActive(st);
+  const sm = s.speakerModel;
+  const active = speakerChangesActive(st, sm.installed);
   return (
-    <Section title={t('speakers.title')} footer={t('speakers.support', { model: capableName })}>
+    <Section title={t('speakers.title')} footer={t('speakers.support')}>
       <ListRow label={<span className="inline-flex items-center gap-2">{t('speakers.toggle')}<Badge tone="ember">{t('speakers.experimental')}</Badge></span>} description={t('speakers.body')}>
         <Toggle label={t('speakers.toggle')} checked={st.speakerChanges} onChange={(v) => set({ speakerChanges: v })} />
       </ListRow>
       {st.speakerChanges && (
         <div className="px-3 py-2.5">
-          {active ? (
-            <p className="flex items-center gap-1.5 text-[12px] text-[var(--success)]"><Check size={14} strokeWidth={2.2} aria-hidden />{t('speakers.ready', { model: t(MODELS[st.model].label) })}</p>
+          {sm.installed ? (
+            <p className="flex items-center gap-1.5 text-[12px] text-[var(--success)]"><Check size={14} strokeWidth={2.2} aria-hidden />{t('speakers.readyAll')}</p>
           ) : (
-            <Card tone="warning" className="p-3">
-              <p className="text-[12px]">{t('speakers.unsupported', { current: t(MODELS[st.model].label) })}</p>
-              <div className="mt-2">
-                {capableStatus.download ? <ModelDownload model={capableStatus} t={t} compact />
-                  : capableStatus.installed
-                    ? <Button size="sm" variant="primary" onClick={() => void api().request('model.use', capable)}>{t('speakers.switch', { model: t(MODELS[capable].label) })}</Button>
-                    : <Button size="sm" variant="primary" onClick={() => void api().request('model.download', capable)}>{t('speakers.downloadSwitch', { model: t(MODELS[capable].label) })} · {formatMB(MODELS[capable].bytes)}</Button>}
-              </div>
+            <Card tone={active ? undefined : 'warning'} className="p-3">
+              <p className="text-[12px]">{active ? t('speakers.legacy', { model: t(MODELS[st.model].label) }) : t('speakers.needModel')}</p>
+              <div className="mt-2"><SpeakerModelDownload model={sm} t={t} compact /></div>
             </Card>
           )}
         </div>
       )}
+      {sm.installed && (
+        <ListRow label={t('speakers.model')} description={`Nemotron 3 Diarization · ${formatMB(sm.bytes)}`}>
+          <Button size="sm" variant="ghost" aria-label={`${t('action.remove')} ${t('speakers.model')}`} onClick={() => void api().request('speakerModel.remove')}>{t('action.remove')}</Button>
+        </ListRow>
+      )}
+    </Section>
+  );
+}
+
+/** The recognition engine: one row each, with what it needs (download / install) and the choice. */
+function EnginesSection({ s, t }: { s: AppStateMsg; t: T }) {
+  const cur = s.settings.engine;
+  const ready = (e: EngineId) => e === 'whisper' ? s.models.some((m) => m.installed) : e === 'apple' ? s.engines.apple.installed : s.engines.parakeet.installed;
+  return (
+    <Section title={t('engine.title')} footer={t('engine.footer')}>
+      {ENGINE_IDS.map((e) => {
+        const inUse = cur === e;
+        const a = s.engines.apple, p = s.engines.parakeet;
+        return (
+          <div key={e} className="flex items-start gap-3 px-3 py-2.5">
+            <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">{inUse && <Check size={16} strokeWidth={2.2} className="text-[var(--accent)]" aria-label={t('transcription.inUse')} />}</div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[13px] font-medium">{t(ENGINES[e].label)}</span>
+                {e === 'parakeet' && <span className="text-[11px] text-[var(--text-3)]">{formatMB(p.bytes)}</span>}
+                {e === 'parakeet' && <Badge tone="go">{t('engine.recommended')}</Badge>}
+              </div>
+              <p className="mt-0.5 text-[12px] text-[var(--text-2)]">{t(ENGINES[e].body)}</p>
+              {e === 'apple' && !a.supported && <p className="mt-1 text-[12px] text-[var(--text-3)]">{t('engine.needsMac26')}</p>}
+              {e === 'apple' && a.installing && <p className="mt-1 text-[12px] text-[var(--text-2)] tabular" aria-live="polite">{t('engine.installing', { pct: Math.round(a.installing.fraction * 100) })}</p>}
+              {e === 'parakeet' && p.download && <div className="mt-2 max-w-[360px]"><EngineSetup s={{ ...s, settings: { ...s.settings, engine: 'parakeet' } }} t={t} /></div>}
+              {((e === 'parakeet' && p.error && !p.download) || (e === 'apple' && a.error && !a.installing)) && <p className="mt-1 text-[12px] text-[var(--danger)]" title={(e === 'apple' ? a.error : p.error) ?? undefined}>{t('model.downloadFailed')}</p>}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {e === 'parakeet' && !p.installed && !p.download && <Button size="sm" onClick={() => void api().request('engine.prepare', 'parakeet')}>{t('action.download')}</Button>}
+              {e === 'apple' && a.supported && !a.installed && !a.installing && <Button size="sm" onClick={() => void api().request('engine.prepare', 'apple')}>{t('engine.install')}</Button>}
+              {!inUse && ready(e) && <Button size="sm" onClick={() => void api().request('engine.use', e)}>{t('action.useModel')}</Button>}
+              {e === 'parakeet' && p.installed && !inUse && <Button size="sm" variant="ghost" aria-label={`${t('action.remove')} ${t(ENGINES[e].label)}`} onClick={() => void api().request('engine.remove')}>{t('action.remove')}</Button>}
+              {inUse && <span className="text-[12px] font-medium text-[var(--accent)]">{t('transcription.inUse')}</span>}
+            </div>
+          </div>
+        );
+      })}
     </Section>
   );
 }
@@ -259,7 +299,8 @@ function SpeakersSection({ s, t }: { s: AppStateMsg; t: T }) {
 function TranscriptionTab({ s, t }: { s: AppStateMsg; t: T }) {
   return (
     <>
-      <Section title={t('transcription.models')}>
+      <EnginesSection s={s} t={t} />
+      {s.settings.engine === 'whisper' && <Section title={t('transcription.models')}>
         {MODEL_IDS.map((id) => {
           const m = s.models.find((x) => x.id === id)!;
           const meta = MODELS[id];
@@ -276,7 +317,6 @@ function TranscriptionTab({ s, t }: { s: AppStateMsg; t: T }) {
                   <Rating label={t('transcription.speed')} value={t(meta.speed)} />
                   <Rating label={t('transcription.accuracy')} value={t(meta.accuracy)} />
                 </div>
-                {meta.turns && <Badge tone="go" className="mt-1.5">{t('speakers.capable')}</Badge>}
                 {m.download && <div className="mt-2 max-w-[360px]"><ModelDownload model={m} t={t} /></div>}
                 {m.error && !m.download && <p className="mt-1 text-[12px] text-[var(--danger)]" title={m.error}>{t('model.downloadFailed')}</p>}
               </div>
@@ -289,7 +329,7 @@ function TranscriptionTab({ s, t }: { s: AppStateMsg; t: T }) {
             </div>
           );
         })}
-      </Section>
+      </Section>}
       <SpeakersSection s={s} t={t} />
       <Section title={t('transcription.language')} footer={t('transcription.languageHint')}>
         <ListRow label={t('transcription.language')}><span className="text-[13px] text-[var(--text-2)]">{t('transcription.languageValue')}</span></ListRow>

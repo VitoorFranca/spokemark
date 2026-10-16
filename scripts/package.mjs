@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-for (const b of ['audiotap', 'whisper-worker']) {
+for (const b of ['audiotap', 'whisper-worker', 'speaker-worker', 'parakeet-worker', 'speech-worker']) {
   if (!existsSync(`build/bin/${b}`)) throw new Error(`build/bin/${b} missing — run npm run build:native`);
 }
 
@@ -35,7 +35,8 @@ const [appDir] = await packager({
   prune: true,
   // Only the bundled JS is needed at runtime (react/zod are bundled by esbuild/vite).
   ignore: [/^\/(src|tests|native|vendor|build|scripts|docs|release|assets|test-results|\.git)(\/|$)/, /^\/dist\/cli(\/|$)/, /^\/playwright/, /^\/node_modules(\/|$)/, /\.(ts|tsx|mts|map)$/, /^\/(tsconfig|vite|vitest)/],
-  extraResource: ['build/bin', 'assets/tray'], // -> Contents/Resources/{bin,tray}
+  // -> Contents/Resources/{bin,tray,licenses}; licenses: third-party code linked into the FluidAudio helpers
+  extraResource: ['build/bin', 'assets/tray', 'native/fluid-workers/licenses'],
   ...(identity ? {
     osxSign: {
       identity,
