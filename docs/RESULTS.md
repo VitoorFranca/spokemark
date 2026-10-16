@@ -34,6 +34,27 @@ With timestamp-only dedup (the first version) the same reference had a WER of 5.
 
 **Offline inference per model** (10 s window, median of 5, no playback): base.en-q5_1 149 ms, base.en 159 ms, small.en-q5_1 388 ms, small.en 430 ms. The portable release build (`GGML_NATIVE=OFF`, built on the GitHub runner) measured 160 ms for base.en.
 
+## 2b. Recognition engines compared (October 2026)
+
+Each file was fed through the app's pipeline at real-time pace (`dist/cli/transcribe.js --wav … --engine …`), **nothing was played**; the engines took turns file by file. MacBook Air M4. Whisper = `base.en` (the default before), Apple = `SpeechTranscriber` en-US (macOS 26.6), Parakeet = Nemotron Speech Streaming 0.6B, 560 ms chunks. The three dialogues ran with speaker changes on.
+
+| | Whisper | Apple | **Parakeet** |
+|---|---|---|---|
+| Word errors (WER), 9 files, 460 words | 2.6 % | 3.5 % | **0.4 %** |
+| Something on screen at a word, p50 / p95 (median over files) | **0.18 s** / 0.85 s | 0.68 s / 1.03 s | 0.44 s / **0.59 s** |
+| Word final (confirmed), p50 / p95 | 0.91 s / 1.55 s | 2.67 s / 6.72 s | **0.72 s / 1.12 s** |
+| Words in 60 s of room noise | 0 | 0 | 0 |
+| Speaker changes found on d1/d2/d3 (5/6/5) | 4/6/5 | 4/6/5 | 4/6/5 |
+| CPU, 179 s of Apollo 13 (helper) | 18.2 s (10.2 % of a core) | 1.5 s own + 5.4 s billed to it by system services (≈ 3.8 %) | 8.0 s (4.5 %) |
+| GPU (Metal time) | 31.9 s (≈ 18 %) | 0 | 0 |
+| Memory | 320 MB | 6 MB (the model lives in macOS) | 76 MB + 570 MB on the Neural Engine |
+| Download | 148 MB (+ 0.9 MB VAD) | none (macOS installs it) | 626 MB |
+
+- "Something on screen" is engine-neutral: the first time any text showed at a word's position, against the end of that word's audio by its final time (Apple's provisional words have no times of their own).
+- The missed d1 change is the same borderline diarizer case for all three engines (the last "Thanks."), not recognition.
+- Load: Parakeet compiles for the Neural Engine once (13 s the first time, then 0.5 s); Apple 0.1 s.
+- Limits: synthetic voices plus one real recording (JFK); the CPU numbers include whatever else the Mac was doing in the background only through the helper's own process. Not yet measured with audio played through the system.
+
 ## 3. Packaged app
 
 Latency here is from the capture of a word's last sample to the **overlay painted** (the renderer acknowledges after `requestAnimationFrame`).

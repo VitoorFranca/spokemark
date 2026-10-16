@@ -2,6 +2,7 @@
 import { Download, X } from 'lucide-react';
 import type { AppStateMsg, ModelStatusMsg, SpeakerModelStatusMsg, Status } from '../../shared/appIpc';
 import type { StringKey } from '../../shared/i18n';
+import { VAD_BYTES } from '../../shared/models';
 import { formatMB, formatSpeed } from './format';
 import { api } from './hooks';
 import { Button, ProgressBar, cx } from './ui';
@@ -36,6 +37,33 @@ export function LevelMeter({ db, active, label }: { db: number; active: boolean;
 /** Model download card / row content with progress, speed and cancel. */
 export function ModelDownload({ model, t, compact }: { model: ModelStatusMsg; t: T; compact?: boolean }) {
   return <Download_ status={model} t={t} compact={compact} start={() => void api().request('model.download', model.id)} cancel={() => void api().request('model.cancel', model.id)} />;
+}
+
+/** Bytes to download before the chosen engine can start (0 for Apple's: macOS installs it). */
+export function engineSetupBytes(s: AppStateMsg): number {
+  if (s.settings.engine === 'parakeet') return s.engines.parakeet.bytes;
+  if (s.settings.engine === 'apple') return 0;
+  return currentModel(s).bytes + (s.vadInstalled ? 0 : VAD_BYTES);
+}
+
+/** What the chosen engine needs before it can start: the Whisper model, the Parakeet model or Apple's. */
+export function EngineSetup({ s, t, compact }: { s: AppStateMsg; t: T; compact?: boolean }) {
+  const e = s.settings.engine;
+  if (e === 'whisper') return <ModelDownload model={currentModel(s)} t={t} compact={compact} />;
+  if (e === 'parakeet') {
+    const m = s.engines.parakeet;
+    return <Download_ status={m} t={t} compact={compact} label={`${t('action.downloadModel')} · ${formatMB(m.bytes)}`}
+      start={() => void api().request('engine.prepare', 'parakeet')} cancel={() => void api().request('engine.cancel')} />;
+  }
+  const a = s.engines.apple;
+  if (!a.supported) return <p className="text-[12px] text-[var(--text-2)]">{t('engine.needsMac26')}</p>;
+  if (a.installing) return <div className="w-full"><ProgressBar value={a.installing.fraction} label={t('engine.install')} /><p className="mt-1 text-[12px] text-[var(--text-2)] tabular" aria-live="polite">{t('engine.installing', { pct: Math.round(a.installing.fraction * 100) })}</p></div>;
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="primary" icon={Download} onClick={() => void api().request('engine.prepare', 'apple')}>{a.error ? t('action.retry') : t('engine.install')}</Button>
+      {a.error && <span className="text-[12px] text-[var(--danger)]" title={a.error}>{t('model.downloadFailed')}</span>}
+    </div>
+  );
 }
 
 /** The same for the speaker-change model. */

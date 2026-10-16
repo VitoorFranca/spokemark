@@ -8,7 +8,7 @@ import { formatMB } from '../shared/format';
 import '../shared/base.css';
 import { api, useAppState, useLevel, useLive, useT } from '../shared/hooks';
 import { lastLines } from '../shared/liveReducer';
-import { currentModel, LevelMeter, ModelDownload } from '../shared/StatusBits';
+import { EngineSetup, engineSetupBytes, LevelMeter } from '../shared/StatusBits';
 import { Badge, Button, cx } from '../shared/ui';
 import { WaveBackdrop } from '../shared/WaveBackdrop';
 
@@ -66,9 +66,8 @@ function Onboarding() {
   const [testOk, setTestOk] = useState(false);
   const [asking, setAsking] = useState(false);
   if (!s) return null;
-  const model = currentModel(s);
   const permOk = s.permission === 'granted';
-  const modelOk = model.installed && s.status !== 'modelMissing'; // 'modelMissing' also covers the VAD model
+  const modelOk = s.engines.ready && s.status !== 'modelMissing'; // 'modelMissing' also covers the VAD model
   const canNext = step === 1 || (step === 2 && permOk) || (step === 3 && modelOk);
 
   const finish = async () => {
@@ -103,8 +102,9 @@ function Onboarding() {
           </Step>
         )}
         {step === 3 && (
-          <Step icon={<Cpu size={26} strokeWidth={1.75} />} title={t('onb.modelTitle')} body={t('onb.modelBody', { size: formatMB(MODELS[model.id].bytes + (s.vadInstalled ? 0 : VAD_BYTES)) })}>
-            {modelOk ? <Done label={t('onb.modelReady')} /> : <div className="text-left"><ModelDownload model={model} t={t} /></div>}
+          <Step icon={<Cpu size={26} strokeWidth={1.75} />} title={t('onb.modelTitle')}
+            body={t(s.settings.engine === 'apple' ? 'onb.modelBodyApple' : s.settings.engine === 'parakeet' ? 'onb.modelBodyParakeet' : 'onb.modelBody', { size: formatMB(engineSetupBytes(s)) })}>
+            {modelOk ? <Done label={t('onb.modelReady')} /> : <div className="text-left"><EngineSetup s={s} t={t} /></div>}
           </Step>
         )}
         {step === 4 && <TestStep s={s} t={t} onOk={setTestOk} />}

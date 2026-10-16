@@ -6,7 +6,7 @@ import path from 'node:path';
 import { launch, ROOT, sleep } from './helpers.mjs';
 
 const helperCount = () => {
-  try { return execFileSync('/bin/sh', ['-c', "ps -A -o command= | grep -cE 'bin/(audiotap|whisper-worker|speaker-worker)( |$)' || true"]).toString().trim(); } catch { return '0'; }
+  try { return execFileSync('/bin/sh', ['-c', "ps -A -o command= | grep -cE 'bin/(audiotap|whisper-worker|speaker-worker|speech-worker|parakeet-worker)( |$)' || true"]).toString().trim(); } catch { return '0'; }
 };
 
 test('onboarding completes when permission is already granted', async () => {
@@ -72,6 +72,27 @@ test('speaker changes run the speaker helper next to whisper, with any model', a
   await expect.poll(async () => (await hook('pids')).length, { timeout: 30_000 }).toBe(2);
   await p.getByRole('button', { name: /Parar legendas|Stop Captions/ }).click();
   await expect(p.getByText(/^(Parado|Stopped)$/)).toBeVisible({ timeout: 10_000 });
+  await app.close();
+  await expect.poll(helperCount).toBe('0');
+});
+
+const running = (name) => { try { return execFileSync('/bin/sh', ['-c', `pgrep -f 'bin/${name}( |$)' | wc -l`]).toString().trim(); } catch { return '0'; } };
+test('each recognition engine runs its own helper; switching restarts the session', async () => {
+  const { app, hook, page } = await launch({ LC_SKIP_ONBOARDING: '1' });
+  await hook('showPanel');
+  const p = await page('panel');
+  const engines = [['whisper', 'whisper-worker'], ['parakeet', 'parakeet-worker']];
+  if ((await hook('state')).engines.apple.installed) engines.push(['apple', 'speech-worker']);
+  await p.evaluate(() => window.spokemark.request('settings.update', { speakerChanges: false, engine: 'whisper' }));
+  await p.getByRole('button', { name: /Iniciar legendas|Start Captions/ }).click();
+  await expect(p.getByText(/^(Ouvindo|Listening)/)).toBeVisible({ timeout: 60_000 });
+  for (const [engine, helper] of engines) {
+    await p.evaluate((e) => window.spokemark.request('engine.use', e), engine);
+    await expect.poll(() => running(helper), { timeout: 60_000 }).toBe('1');
+    await expect(p.getByText(/^(Ouvindo|Listening)/)).toBeVisible({ timeout: 60_000 });
+    for (const [, other] of engines) if (other !== helper) expect(running(other)).toBe('0');
+  }
+  await p.getByRole('button', { name: /Parar legendas|Stop Captions/ }).click();
   await app.close();
   await expect.poll(helperCount).toBe('0');
 });

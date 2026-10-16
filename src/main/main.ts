@@ -11,6 +11,7 @@ import type { TranscriptUpdate } from './asr/TranscriptionProvider';
 import { CaptionsController, type Indicator } from './CaptionsController';
 import { Metrics, percentile } from './metrics';
 import { ModelManager, SPEAKER_MODEL_DIR } from './models/ModelManager';
+import { AppleSpeech } from './engines/AppleSpeech';
 import { killAllChildren } from './native/ChildSupervisor';
 import { OverlayManager } from './overlay/OverlayManager';
 import { binDir, dataDir, migrateLegacyDataDir, modelsDir } from './paths';
@@ -44,6 +45,7 @@ if (!app.requestSingleInstanceLock()) app.quit();
 let settings: SettingsService;
 let store: TranscriptStore;
 let models: ModelManager;
+let appleSpeech: AppleSpeech;
 let captions: CaptionsController;
 let overlay: OverlayManager;
 let windows: WindowManager;
@@ -78,14 +80,25 @@ function status(): Status {
     return i === 'permission' ? 'permission' : i === 'silent' ? 'silent' : i === 'processing' ? 'processing' : 'listening';
   }
   if (paused) return 'paused';
-  if (!models.isReady(settings.get().model)) return 'modelMissing';
+  if (!engineReady()) return 'modelMissing';
   if (permission === 'denied') return 'permission';
   return 'idle';
 }
 
+/** The chosen recognition engine has what it needs to start. */
+function engineReady(): boolean {
+  const s = settings.get();
+  if (s.engine === 'apple') return appleSpeech.status.installed;
+  if (s.engine === 'parakeet') return models.packInstalled('parakeet') && existsSync(path.join(binDir(), 'parakeet-worker'));
+  return models.isReady(s.model);
+}
+
+/** What a session was transcribed with (stored with it in the history). */
+const engineLabel = (): string => { const s = settings.get(); return s.engine === 'whisper' ? s.model : s.engine; };
+
 /** Map technical failures to something the UI can explain and act on. */
 function errorKind(msg: string): 'model' | 'capture' | 'unknown' {
-  if (/load (VAD )?model|whisper-worker|Transcription failed/i.test(msg)) return 'model';
+  if (/load (VAD )?model|whisper-worker|speech-worker|parakeet-worker|speech model|Transcription failed/i.test(msg)) return 'model';
   if (/audiotap|Audio capture|tap|aggregate/i.test(msg)) return 'capture';
   return 'unknown';
 }
@@ -110,6 +123,7 @@ function snapshot(): AppStateMsg {
     settings: settings.get(),
     models: models.status(),
     speakerModel: models.speakerStatus(),
+    engines: { ready: engineReady(), apple: appleSpeech.status, parakeet: models.packStatus('parakeet') },
     overlay: { visible: overlay.visible, editMode: overlay.isEditMode },
     displays: screen.getAllDisplays().map((d, i) => ({ id: String(d.id), label: d.label || `Display ${i + 1}` })),
     shortcutErrors,
@@ -243,7 +257,7 @@ let paused = false;
 
 async function startCaptions(): Promise<{ ok: boolean; reason?: string }> {
   if (captions.state.state === 'stopping') return { ok: false, reason: 'busy' };
-  if (!models.isReady(settings.get().model)) { broadcast(); return { ok: false, reason: 'modelMissing' }; }
+  if (!engineReady()) { broadcast(); return { ok: false, reason: 'modelMissing' }; }
   if (settings.get().overlayVisible) overlay.show();
   const resume = paused;
   await captions.start({ resume });
@@ -327,6 +341,16 @@ async function handleRequest(win: BrowserWindow | undefined, name: RequestName, 
     case 'model.cancel': models.cancel(p as Settings['model']); return true;
     case 'model.remove': if (!(p === settings.get().model && snapshot().running)) models.remove(p as Settings['model']); return true;
     case 'model.use': settings.update({ model: p as Settings['model'] }); return true;
+    case 'engine.use': settings.update({ engine: p as Settings['engine'] }); return true;
+    case 'engine.prepare': {
+      const e = p as Settings['engine'];
+      if (e === 'apple') void appleSpeech.install().then(() => broadcast());
+      else if (e === 'parakeet') void models.downloadPack('parakeet').then(() => broadcast());
+      else void models.download(settings.get().model).then(() => broadcast());
+      return true;
+    }
+    case 'engine.cancel': models.cancelPack('parakeet'); return true;
+    case 'engine.remove': if (!(captions.currentEngine === 'parakeet' && snapshot().running)) models.removePack('parakeet'); return true;
     case 'speakerModel.download': void models.downloadSpeakerModel().then(() => broadcast()); return true;
     case 'speakerModel.cancel': models.cancelSpeakerModel(); return true;
     case 'speakerModel.remove': if (!(captions.turnsMode === 'diarizer' && snapshot().running)) models.removeSpeakerModel(); return true;
@@ -458,10 +482,14 @@ app.whenReady().then(async () => {
   store.applyRetention(s0.retentionDays);
   setInterval(() => store.applyRetention(settings.get().retentionDays), 6 * 3_600_000);
   models = new ModelManager();
+  appleSpeech = new AppleSpeech();
+  appleSpeech.on('change', () => broadcast());
+  void appleSpeech.refresh();
   metrics = new Metrics(E2E.metricsFile);
   captions = new CaptionsController(s0.model, { maxLines: s0.maxLines, maxCharsPerLine: 64 });
   void captions.setSpeakerChanges(s0.speakerChanges);
   void captions.setSpeakerModel(speakerModelDir());
+  void captions.setEngine(s0.engine);
   windows = new WindowManager(process.env.VITE_DEV_SERVER_URL ?? null);
   windows.dockAlways = s0.dockAlways;
   windows.updateDock();
@@ -521,7 +549,7 @@ app.whenReady().then(async () => {
   captions.on('log', log);
   captions.on('session', (what: 'started' | 'ended') => {
     // a pause keeps the session (and the frozen captions) until resume or stop
-    if (what === 'started') { if (store.liveStartedAt === null) { store.persist = settings.get().historyEnabled; store.startSession(settings.get().model); provisionalText = ''; sendLive(liveReset()); } }
+    if (what === 'started') { if (store.liveStartedAt === null) { store.persist = settings.get().historyEnabled; store.startSession(engineLabel()); provisionalText = ''; sendLive(liveReset()); } }
     else if (!paused) { store.endSession(); provisionalText = ''; sendTailSoon(); sourceTracker.reset(); currentSource = null; overlay.setExtra({ source: null, translation: '', pairs: [] }); }
   });
   captions.on('update', (u: TranscriptUpdate) => {
@@ -565,6 +593,7 @@ app.whenReady().then(async () => {
     if (has('historyEnabled') && !snapshot().running) store.persist = n.historyEnabled;
     if (has('retentionDays')) store.applyRetention(n.retentionDays);
     if (has('model')) void captions.setModel(n.model);
+    if (has('engine')) void captions.setEngine(n.engine);
     if (has('speakerChanges')) void captions.setSpeakerChanges(n.speakerChanges);
     if (has('model', 'speakerChanges')) overlay.relayout(); // translation needs room for one line per speaker
     if (!keys.every((k) => k === 'boundsByDisplay')) broadcast();

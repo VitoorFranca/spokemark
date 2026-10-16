@@ -134,6 +134,12 @@ describe('settings migration', () => {
     expect(load({ model: 'base.en' }).speakerChanges).toBe(false);
     expect(load({ model: 'small.en-tdrz', speakerChanges: false }).speakerChanges).toBe(false);
   });
+  it('keeps Whisper for installs from before engines existed; new installs get Parakeet', () => {
+    expect(load({ model: 'small.en' }).engine).toBe('whisper');
+    expect(load({ engine: 'apple' }).engine).toBe('apple');
+    const f = path.join(mkdtempSync(path.join(tmpdir(), 'sm-')), 'settings.json');
+    expect(new SettingsService(f).get().engine).toBe('parakeet');
+  });
 });
 
 import { Requests } from '../../src/shared/appIpc';

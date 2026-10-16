@@ -2,7 +2,7 @@
 // main -> renderer messages are validated in the preload; renderer -> main
 // requests are validated in main before anything runs.
 import { z } from 'zod';
-import { ModelIdSchema, SettingsPatchSchema, SettingsSchema } from './settings';
+import { EngineIdSchema, ModelIdSchema, SettingsPatchSchema, SettingsSchema } from './settings';
 
 export const SegmentSchema = z.object({ startMs: z.number(), endMs: z.number(), text: z.string().max(4000) });
 export type SegmentMsg = z.infer<typeof SegmentSchema>;
@@ -42,6 +42,11 @@ export const AppStateSchema = z.object({
   settings: SettingsSchema,
   models: z.array(ModelStatusSchema),
   speakerModel: SpeakerModelStatusSchema,
+  engines: z.object({
+    ready: z.boolean(), // the chosen engine can start
+    apple: z.object({ supported: z.boolean(), installed: z.boolean(), installing: z.object({ fraction: z.number() }).nullable(), error: z.string().nullable() }),
+    parakeet: SpeakerModelStatusSchema, // same shape: a downloaded multi-file model
+  }),
   overlay: z.object({ visible: z.boolean(), editMode: z.boolean() }),
   displays: z.array(z.object({ id: z.string(), label: z.string() })),
   shortcutErrors: z.array(z.enum(['shortcutToggle', 'shortcutOverlay', 'shortcutEdit'])),
@@ -95,6 +100,10 @@ export const Requests = {
   'model.cancel': ModelIdSchema,
   'model.remove': ModelIdSchema,
   'model.use': ModelIdSchema,
+  'engine.use': EngineIdSchema,
+  'engine.prepare': EngineIdSchema,
+  'engine.cancel': z.undefined(),
+  'engine.remove': z.undefined(),
   'speakerModel.download': z.undefined(),
   'speakerModel.cancel': z.undefined(),
   'speakerModel.remove': z.undefined(),

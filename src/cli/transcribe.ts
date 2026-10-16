@@ -3,6 +3,7 @@
 // Usage: node dist/cli/transcribe.js --model base.en --seconds 30 --out run.json
 //        --wav file.wav       feed a file at real-time pace instead of capturing (nothing is played)
 //        --speakers <dir>     mark speaker changes with speaker-worker (the speaker model folder)
+//        --engine whisper|apple|parakeet   recognition engine (default whisper)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { wer } from '../shared/wer';
 import { TURN_TEXT } from '../main/asr/localAgreement';
@@ -12,8 +13,10 @@ import path from 'node:path';
 import { AudioCaptureService, type CaptureFormat, type CaptureStatus } from '../main/audio/AudioCaptureService';
 import { AudioProcessingPipeline } from '../main/audio/AudioProcessingPipeline';
 import type { TranscriptUpdate } from '../main/asr/TranscriptionProvider';
+import { StreamingEngineProvider } from '../main/asr/StreamingEngineProvider';
 import { DEFAULT_WHISPER_OPTIONS, WhisperProvider } from '../main/asr/WhisperProvider';
-import { binDir, modelPath, vadModelPath, type ModelId } from '../main/paths';
+import { PARAKEET_MODEL_DIR } from '../main/models/ModelManager';
+import { binDir, modelPath, modelsDir, vadModelPath, type ModelId } from '../main/paths';
 import { SubtitleManager } from '../main/subtitles/SubtitleManager';
 
 const args = process.argv.slice(2);
@@ -26,13 +29,14 @@ const usePrompt = arg('prompt', '0') === '1';
 const ref = arg('ref', '');
 const wavFile = arg('wav', '');
 const speakerDir = arg('speakers', '');
+const engine = arg('engine', 'whisper');
 
 const t0 = process.hrtime.bigint();
 const ms = (ns: bigint) => Number(ns - t0) / 1e6;
 
 const capture = new AudioCaptureService(path.join(binDir(), 'audiotap'));
 const pipeline = new AudioProcessingPipeline(60);
-const provider = new WhisperProvider(pipeline.ring, {
+const whisper = engine !== 'whisper' ? null : new WhisperProvider(pipeline.ring, {
   ...DEFAULT_WHISPER_OPTIONS,
   stepMs,
   usePrompt,
@@ -42,6 +46,9 @@ const provider = new WhisperProvider(pipeline.ring, {
   modelPath: modelPath(model),
   vadModelPath: vadModelPath(),
 });
+const provider = whisper ?? new StreamingEngineProvider(engine === 'apple'
+  ? { name: 'speech-worker', binPath: path.join(binDir(), 'speech-worker'), args: [] }
+  : { name: 'parakeet-worker', binPath: path.join(binDir(), 'parakeet-worker'), args: ['--model-dir', path.join(modelsDir(), PARAKEET_MODEL_DIR)] });
 const subs = new SubtitleManager({ maxCharsPerLine: 60, maxLines: wavFile ? 500 : 3 }); // a file run keeps every line for the summary
 const speakers = speakerDir ? new SpeakerWorkerClient(path.join(binDir(), 'speaker-worker'), speakerDir) : null;
 const attributor = speakers ? new SpeakerAttributor() : null;
@@ -51,6 +58,13 @@ const events: unknown[] = [];
 const confirmedWords: { p: number; text: string; startS: number; endS: number; latencyMs: number | null; atMs: number }[] = [];
 const wordLatency: number[] = [];
 const firstSeenLatency: number[] = [];
+// Engine-neutral "on screen" latency: when did *something* first show at a word's position
+// (provisional text, possibly different), measured against the end of that word's audio
+// by its final time. Provisional word times are estimates in some engines (Apple), so
+// they are not used.
+const posFirstSeen: bigint[] = [];
+let posConfirmed = 0;
+const shownLatency: number[] = [];
 const clockSkew: number[] = [];
 
 capture.on('format', (f: CaptureFormat) => { pipeline.setFormat(f.sampleRate, f.channels); console.error(`[cli] format ${JSON.stringify(f)}`); });
@@ -67,8 +81,8 @@ speakers?.on('log', (l: string) => console.error(l));
 speakers?.on('ready', () => { attributor!.live = true; });
 speakers?.on('spans', (sp: SpeakerSpan[]) => { speakerSpans.push(...sp); onUpdate(attributor!.addSpans(sp)); });
 provider.on('log', (l: string) => { if (process.env.LC_VERBOSE || /metal|error|fail/i.test(l)) console.error(l); });
-provider.vad.on('speech-start', (i: number) => events.push({ atMs: ms(process.hrtime.bigint()), vad: 'start', t: i / 16000 }));
-provider.vad.on('speech-end', (i: number) => events.push({ atMs: ms(process.hrtime.bigint()), vad: 'end', t: i / 16000 }));
+whisper?.vad.on('speech-start', (i: number) => events.push({ atMs: ms(process.hrtime.bigint()), vad: 'start', t: i / 16000 }));
+whisper?.vad.on('speech-end', (i: number) => events.push({ atMs: ms(process.hrtime.bigint()), vad: 'end', t: i / 16000 }));
 
 subs.on('change', (_v, newWords: { end: number }[]) => {
   const now = process.hrtime.bigint();
@@ -84,15 +98,20 @@ function onUpdate(u: TranscriptUpdate | null): void {
   if (!u) return;
   subs.apply(u);
   const now = process.hrtime.bigint();
+  const real = (ws: { text: string }[]) => ws.filter((w) => w.text !== TURN_TEXT && w.text.trim());
+  const conf = real(u.confirmed), prov = real(u.provisional);
+  for (let i = 0; i < conf.length + prov.length; i++) if (posFirstSeen[posConfirmed + i] === undefined) posFirstSeen[posConfirmed + i] = now;
+  for (const w of conf as typeof u.confirmed) {
+    const c = pipeline.captureTimeOf(w.end), seen = posFirstSeen[posConfirmed++]!;
+    if (c !== null) shownLatency.push(Number(seen - c) / 1e6);
+  }
   for (const w of u.confirmed) {
     const c = pipeline.captureTimeOf(w.end);
     const lat = c !== null ? Number(now - c) / 1e6 : null;
     if (lat !== null && w.text !== TURN_TEXT) wordLatency.push(lat);
     confirmedWords.push({ p: Number(w.p.toFixed(2)), text: w.text.trim(), startS: w.start / 16000, endS: w.end / 16000, latencyMs: lat, atMs: ms(now) });
   }
-  const conf = u.confirmed.map((w) => w.text).join('').trim();
-  const prov = u.provisional.map((w) => w.text).join('').trim();
-  console.log(`${(ms(now) / 1000).toFixed(1).padStart(6)}s infer=${u.inferMs.toFixed(0)}ms ${u.utteranceEnd ? 'END ' : ''}| ${conf} \x1b[2m${prov}\x1b[0m`);
+  console.log(`${(ms(now) / 1000).toFixed(1).padStart(6)}s infer=${u.inferMs.toFixed(0)}ms ${u.utteranceEnd ? 'END ' : ''}| ${u.confirmed.map((w) => w.text).join('').trim()} \x1b[2m${u.provisional.map((w) => w.text).join('').trim()}\x1b[0m`);
 }
 
 /** 16-bit PCM or 32-bit float WAV -> interleaved samples. */
@@ -136,7 +155,7 @@ async function main() {
   }
   await provider.start();
   if (wavFile) {
-    console.error(`[cli] whisper ready (model ${model}, metal=${provider.metalInitialized}); feeding ${wavFile}`);
+    console.error(`[cli] ${engine} ready (model ${model}, metal=${provider.metalInitialized}); feeding ${wavFile}`);
     await feedWav(wavFile);
   } else {
     console.error(`[cli] whisper ready (model ${model}, metal=${provider.metalInitialized}); capturing ${seconds}s`);
@@ -149,7 +168,7 @@ async function main() {
   onUpdate(attributor?.flush() ?? null);
   await Promise.all([provider.stop(), speakers?.stop()]);
   const summary = {
-    model, seconds, stepMs, usePrompt,
+    engine, model: engine === 'whisper' ? model : engine, seconds, stepMs, usePrompt,
     metal: provider.metalInitialized,
     transcript: confirmedWords.filter((w) => w.text !== TURN_TEXT.trim()).map((w) => w.text).join(' '),
     wer: ref ? wer(readFileSync(ref, 'utf8'), confirmedWords.filter((w) => w.text !== TURN_TEXT.trim()).map((w) => w.text).join(' ')) : undefined,
@@ -157,9 +176,10 @@ async function main() {
     lines: subs.view().lines.map((l) => l.committed),
     confirmedLatencyMs: { p50: pct(wordLatency, 50), p95: pct(wordLatency, 95), n: wordLatency.length },
     firstSeenLatencyMs: { p50: pct(firstSeenLatency, 50), p95: pct(firstSeenLatency, 95), n: firstSeenLatency.length },
+    shownLatencyMs: { p50: pct(shownLatency, 50), p95: pct(shownLatency, 95), n: shownLatency.length },
     inferMs: { p50: pct(provider.stats.inferMs, 50), p95: pct(provider.stats.inferMs, 95), n: provider.stats.inferMs.length },
     captureToMainMs: { p50: pct(clockSkew, 50), p95: pct(clockSkew, 95) },
-    stats: { ...provider.stats, inferMs: undefined, vadMaxInflight: provider.vad.maxInflight },
+    stats: { ...provider.stats, inferMs: undefined, vadMaxInflight: whisper?.vad.maxInflight },
     words: confirmedWords,
     speakerSpans: speakerSpans.filter((sp) => sp.speaker >= 0).map((sp) => ({ speaker: sp.speaker, startS: sp.start / 16000, endS: sp.end / 16000, overlap: sp.overlap })),
     events,

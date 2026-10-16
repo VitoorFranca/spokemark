@@ -2,7 +2,7 @@ node_modules/
 dist/
 release/
 vendor/
-native/speaker-worker/.build/
+native/fluid-workers/.build/
 build/*
 !build/macos/
 *.part

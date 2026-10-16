@@ -21,4 +21,5 @@ export const MODELS: Record<ModelIdT, { label: StringKey; bytes: number; speed: 
 export const translationLineCount = (maxLines: number, speakerTurns: boolean): number => (speakerTurns ? maxLines : maxLines === 3 ? 2 : 1);
 
 /** Speaker changes are on and can be produced: with the speaker model (any recognition model) or a model that marks them itself. */
-export const speakerChangesActive = (s: { speakerChanges: boolean; model: ModelIdT }, speakerModel: boolean): boolean => s.speakerChanges && (speakerModel || !!MODELS[s.model].turns);
+export const speakerChangesActive = (s: { speakerChanges: boolean; model: ModelIdT; engine?: string }, speakerModel: boolean): boolean =>
+  s.speakerChanges && (speakerModel || ((s.engine ?? 'whisper') === 'whisper' && !!MODELS[s.model].turns));

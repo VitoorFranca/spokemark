@@ -36,6 +36,7 @@ Calls, videos, podcasts — 100% on-device. No cloud, no account, no audio ever 
 - **Made for reading.** Caption presets (Standard, High contrast, Cinema), font, size, background opacity, 2–3 lines, top or bottom, per-display position — with a live preview.
 - **Live translation.** Show the translation under the original caption (or only the translation), translated on-device with Apple's Translation framework — macOS 26 or later, using the languages installed in System Settings.
 - **Knows what's playing.** The overlay shows the icon and name of the app the audio comes from, with soft waves that follow the voice.
+- **Choose the recognition engine.** *Parakeet* (default: NVIDIA's Nemotron Speech Streaming on the Neural Engine), *Apple* (macOS 26's on-device recognizer, nothing to download) or *Whisper* (whisper.cpp on the GPU). All run on your Mac; numbers in [`docs/RESULTS.md`](docs/RESULTS.md).
 - **Speaker changes (experimental).** Turn on *Mark speaker changes* (Settings › Transcription) and a new line starts, with a dash, when a different person starts talking; translations follow the same turns. A separate speaker model (199 MB, downloaded on request) tells voices apart on the Neural Engine and works with every speech model. It marks *that* the speaker changed, not *who* it is, and nothing about voices is saved.
 - **Native feel.** Dark (default), light or system appearance, full keyboard navigation, VoiceOver labels, English and Brazilian Portuguese.
 
@@ -122,6 +123,7 @@ brew install cmake          # to build whisper.cpp
 npm install
 npm run build:native        # audiotap, translator, speaker-worker (Swift) + whisper-worker (whisper.cpp v1.9.5, Metal)
 npm run models              # base.en + Silero VAD → ~/Library/Application Support/Spokemark/models
+npm run models -- parakeet  # the default engine's model (626 MB)
 npm run models -- speakers  # optional: the speaker model (speaker changes)
 npm run dev                 # run in development
 npm run package             # release/Spokemark-darwin-arm64/Spokemark.app (ad-hoc signed)
@@ -149,7 +151,8 @@ Push a tag such as `v0.2.0` and [the release workflow](.github/workflows/release
 ```
 native/audiotap/          Swift system-audio capture helper (Process Tap)
 native/whisper-worker/    C++ speech engine helper (whisper.cpp + Metal + Silero VAD)
-native/speaker-worker/    Swift speaker-diarization helper (FluidAudio, CoreML)
+native/fluid-workers/     Swift helpers on FluidAudio (CoreML): speaker diarization, Parakeet recognition
+native/speech-worker/     Swift helper: Apple SpeechAnalyzer recognition (macOS 26+)
 src/main/                 Electron main process: pipeline, history, windows, menus
 src/preload/              minimal, validated bridges for the sandboxed renderers
 src/renderer/             React UI: overlay, panel, main window, settings, onboarding
@@ -172,6 +175,7 @@ The **Spokemark name, logo and visual identity are not covered by the MIT Licens
 
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp) and the [OpenAI Whisper](https://github.com/openai/whisper) models (MIT)
 - [Silero VAD](https://github.com/snakers4/silero-vad) (MIT) and [tinydiarize](https://github.com/akashmjn/tinydiarize) (MIT)
+- NVIDIA's Nemotron Speech Streaming 0.6B, [converted to CoreML by FluidInference](https://huggingface.co/FluidInference/nemotron-speech-streaming-en-0.6b-coreml) (NVIDIA Open Model License); Apple's Speech framework
 - [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) and NVIDIA's Nemotron 3 Diarization model, [converted to CoreML by FluidInference](https://huggingface.co/FluidInference/nemotron-3-diarization-coreml) (OpenMDW 1.1)
 - [Electron](https://www.electronjs.org), [React](https://react.dev) (MIT) and [Lucide](https://lucide.dev) icons (ISC)
 - The *LocalAgreement* streaming policy from Macháček et al., *Turning Whisper into Real-Time Transcription System* (2023)

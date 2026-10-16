@@ -5,9 +5,12 @@ import { AudioCaptureService, type CaptureFormat, type CaptureStatus } from './a
 import { AudioProcessingPipeline } from './audio/AudioProcessingPipeline';
 import type { Word } from './asr/localAgreement';
 import type { TranscriptUpdate } from './asr/TranscriptionProvider';
+import { StreamingEngineProvider } from './asr/StreamingEngineProvider';
 import { DEFAULT_WHISPER_OPTIONS, WhisperProvider } from './asr/WhisperProvider';
+import { PARAKEET_MODEL_DIR } from './models/ModelManager';
+import type { EngineId } from '../shared/settings';
 import { MODELS } from '../shared/models';
-import { binDir, modelPath, vadModelPath, type ModelId } from './paths';
+import { binDir, modelPath, modelsDir, vadModelPath, type ModelId } from './paths';
 import { SpeakerAttributor, type SpeakerSpan } from './speakers/SpeakerAttributor';
 import { SpeakerWorkerClient } from './speakers/SpeakerWorkerClient';
 import { SubtitleManager, type SubtitleView } from './subtitles/SubtitleManager';
@@ -30,7 +33,8 @@ export class CaptionsController extends EventEmitter {
   readonly subtitles: SubtitleManager;
   private capture: AudioCaptureService | null = null;
   private pipeline: AudioProcessingPipeline | null = null;
-  private provider: WhisperProvider | null = null;
+  private provider: WhisperProvider | StreamingEngineProvider | null = null;
+  private engine: EngineId = 'whisper';
   private speakers: SpeakerWorkerClient | null = null;
   private attributor: SpeakerAttributor | null = null;
   private holdTimer: NodeJS.Timeout | null = null;
@@ -93,14 +97,18 @@ export class CaptionsController extends EventEmitter {
     this.silent = false;
     if (!opts.resume) this.subtitles.clear();
     const pipeline = new AudioProcessingPipeline(60);
-    const provider = new WhisperProvider(pipeline.ring, {
-      ...DEFAULT_WHISPER_OPTIONS,
-      binPath: path.join(binDir(), 'whisper-worker'),
-      modelPath: modelPath(this.model),
-      vadModelPath: vadModelPath(),
-      turnContextS: this.turnsMode === 'tdrz' ? 3 : 0,
-      tdrz: this.turnsMode === 'tdrz',
-    });
+    const provider = this.engine === 'whisper'
+      ? new WhisperProvider(pipeline.ring, {
+        ...DEFAULT_WHISPER_OPTIONS,
+        binPath: path.join(binDir(), 'whisper-worker'),
+        modelPath: modelPath(this.model),
+        vadModelPath: vadModelPath(),
+        turnContextS: this.turnsMode === 'tdrz' ? 3 : 0,
+        tdrz: this.turnsMode === 'tdrz',
+      })
+      : this.engine === 'apple'
+        ? new StreamingEngineProvider({ name: 'speech-worker', binPath: path.join(binDir(), 'speech-worker'), args: [] })
+        : new StreamingEngineProvider({ name: 'parakeet-worker', binPath: path.join(binDir(), 'parakeet-worker'), args: ['--model-dir', path.join(modelsDir(), PARAKEET_MODEL_DIR)] });
     const capture = new AudioCaptureService(path.join(binDir(), 'audiotap'));
     this.pipeline = pipeline;
     this.provider = provider;
@@ -136,7 +144,7 @@ export class CaptionsController extends EventEmitter {
       capture.start();
       this.state.to('capturing');
       this.emit('session', 'started');
-      this.emit('log', `[captions] started (model ${this.model}, metal=${provider.metalInitialized}, speaker changes ${this.turnsMode})`);
+      this.emit('log', `[captions] started (engine ${this.engine}, model ${this.engine === 'whisper' ? this.model : '-'}, metal=${provider.metalInitialized}, speaker changes ${this.turnsMode})`);
     } catch (e) {
       await this.fail((e as Error).message);
     }
@@ -211,7 +219,7 @@ export class CaptionsController extends EventEmitter {
   get turnsMode(): TurnsMode {
     if (!this.speakerChanges) return 'off';
     if (this.speakerModelDir) return 'diarizer';
-    return MODELS[this.model].turns ? 'tdrz' : 'off';
+    return this.engine === 'whisper' && MODELS[this.model].turns ? 'tdrz' : 'off';
   }
 
   /** Turn speaker changes on/off; restarts a running session only when the effective mode changes. */
@@ -238,10 +246,24 @@ export class CaptionsController extends EventEmitter {
     this.subtitles.clear();
   }
 
+  get currentEngine(): EngineId {
+    return this.engine;
+  }
+
+  /** Switch recognition engine; restarts a running session. */
+  async setEngine(e: EngineId): Promise<void> {
+    if (e === this.engine) return;
+    this.engine = e;
+    if (this.state.state === 'capturing' || this.state.state === 'starting') {
+      await this.stop();
+      await this.start();
+    }
+  }
+
   async setModel(m: ModelId): Promise<void> {
     if (m === this.model) return;
     this.model = m;
-    if (this.state.state === 'capturing' || this.state.state === 'starting') {
+    if (this.engine === 'whisper' && (this.state.state === 'capturing' || this.state.state === 'starting')) {
       await this.stop();
       await this.start();
     }
