@@ -76,10 +76,27 @@ Fed from files at real-time pace through the same modules as the app (`node dist
 | Same model through FluidAudio's own CLI | same speaker segments as `speaker-worker` (parity) |
 | UI test (Playwright, dev build) | with the setting on: audiotap + whisper-worker + speaker-worker; off: the session restarts without it; 0 helpers after quit |
 
+**Live, played through the system output** (`scripts/e2e-transcribe.sh … --speakers <dir>`, real Process Tap capture, after the punctuation and near-tie rules below):
+
+| Test | Result |
+|---|---|
+| 2 rounds × 3 dialogues (32 speaker changes) | **32 of 32 detected, 0 false**; 28 at the exact word, 4 off by 1–3 words (all in one round) |
+| Why the 4 misses | Whisper's word times in that round were off by up to 0.6 s (e.g. `table,` 13.71 s vs 13.23 s in the other round), while the diarizer's change points were the same in both rounds (±20 ms) |
+| Confirmed-word latency p50 | 1.02–1.15 s with the diarizer; 0.86–1.04 s without (same dialogues, live) |
+| First appearance p50 | 0.49–0.66 s with, 0.49–0.56 s without |
+| WER | same range with and without the diarizer (0–11 % with, 0–8 % without across rounds); the variation comes from recognition (e.g. `Okay, a ticket for that` also without the diarizer) |
+| UI tests with audio (`E2E_AUDIO=1`) | 7 of 7 passed |
+
+Rules added from these runs (each has a unit test with the measured times):
+- a near tie inside a word (< 50 ms) goes to the voice that starts later (`of` 60 vs 40 ms at a gap-0 change);
+- across a pause (≥ 0.15 s), a turn is not put right before the word that ends a sentence (`budget is | tight.` with `tight.` timed inside the next voice);
+- a voiceless word right after a sentence end goes to the first voice within 0.5 s (`year. I | would`).
+
+Next step for the remaining misses: more accurate word times from whisper.cpp (DTW token timestamps), a change in `whisper-worker`.
+
 **Known limits.**
 - Two similar synthetic male voices (Portuguese test, `say` voices Reed and Eddy) were merged into one speaker; a borderline turn in d1 flipped speaker after a different 22 → 16 kHz resampling (the model's input is sensitive to that, FluidAudio's CLI behaves the same). Synthetic voices are not real people: a consented real conversation is the next test.
 - Short interjections spoken *over* another voice: the diarizer detects them (1.34 of 1.34 s of overlap), but Whisper usually drops their words, so no line appears for them.
-- Not yet measured with real audio played through the system (the audio-playing tests run only after asking).
 
 ## 4b. Speaker changes with tinydiarize (`small.en-tdrz`, the earlier path)
 

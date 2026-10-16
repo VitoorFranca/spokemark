@@ -105,6 +105,38 @@ describe('SpeakerAttributor', () => {
     expect(text(a.apply(upd([w('x', 0.1, 0.3), turn, w('y', 1.1, 1.3)], [], 3)).confirmed)).toBe('x y');
   });
 
+  it('does not split a sentence right before its last word (live: "tight." timed inside the next voice)', () => {
+    const a = new SpeakerAttributor();
+    a.live = true;
+    a.addSpans([span(1, 24.48, 25.92), span(-1, 25.92, 26.17), span(0, 26.17, 28)]);
+    const u = a.apply(upd([w('budget', 24.95, 25.29), w('is', 25.36, 25.36), w('tight.', 26.15, 26.55), w('Sounds', 26.31, 26.61), w('good.', 26.78, 27.15)], [], 28));
+    expect(text(u.confirmed)).toBe('budget is tight. | Sounds good.');
+  });
+
+  it('gives a voiceless word after a sentence end to the next voice (live: "I" timed in the pause)', () => {
+    const a = new SpeakerAttributor();
+    a.live = true;
+    a.addSpans([span(0, 7.2, 8.08), span(-1, 8.08, 8.35), span(1, 8.35, 9.4)]);
+    const u = a.apply(upd([w('this', 7.6, 7.76), w('year.', 7.76, 8.08), w('I', 8.08, 8.15), w('would', 8.49, 8.53)], [], 9.4));
+    expect(text(u.confirmed)).toBe('this year. | I would');
+  });
+
+  it('without a pause, a near tie goes to the voice that starts later (live: "of" 60 vs 40 ms)', () => {
+    const a = new SpeakerAttributor();
+    a.live = true;
+    a.addSpans([span(0, 12.96, 13.6), span(1, 13.6, 14.23)]);
+    const u = a.apply(upd([w('table,', 13.23, 13.54), w('of', 13.54, 13.64), w('course.', 13.64, 14.05)], [], 14.23));
+    expect(text(u.confirmed)).toBe('table, | of course.');
+  });
+
+  it('keeps a zero-length, sentence-ending word with the previous speaker (its time is not usable)', () => {
+    const a = new SpeakerAttributor();
+    a.live = true;
+    a.addSpans([span(0, 5.3, 7.92), span(-1, 7.92, 8.18), span(1, 8.18, 9.4)]);
+    const u = a.apply(upd([w('this', 7.79, 7.87), w('year.', 8.15, 8.15), w('I', 8.16, 8.19), w('would', 8.19, 8.38)], [], 9.4));
+    expect(text(u.confirmed)).toBe('this year. | I would');
+  });
+
   it('previews turns in the provisional tail when the timeline already knows', () => {
     const a = new SpeakerAttributor();
     a.live = true;
