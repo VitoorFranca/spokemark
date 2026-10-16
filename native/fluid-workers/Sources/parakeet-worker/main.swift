@@ -68,12 +68,18 @@ Thread.detachNewThread {
     sink.finish()
 }
 
-nonisolated func isBoundary(_ t: String) -> Bool { t.hasPrefix("▁") || t.hasPrefix(" ") }
+/// A token that starts a new word. Punctuation never does, even with the marker ("sprint" "▁."):
+/// it belongs to the word before it.
+nonisolated func isBoundary(_ t: String) -> Bool {
+    guard t.hasPrefix("▁") || t.hasPrefix(" ") else { return false }
+    let core = t.trimmingCharacters(in: CharacterSet(charactersIn: "▁ "))
+    return core.isEmpty || !core.unicodeScalars.allSatisfy { CharacterSet.punctuationCharacters.contains($0) }
+}
 /// Group tokens into words: [text, start, end].
 nonisolated func group(_ toks: ArraySlice<TokenTiming>) -> [[Any]] {
     var out: [[Any]] = []
     for t in toks where !t.token.isEmpty && t.token != "<blank>" && t.token != "<pad>" {
-        let piece = t.token.replacingOccurrences(of: "▁", with: " ")
+        let piece = isBoundary(t.token) ? t.token.replacingOccurrences(of: "▁", with: " ") : t.token.replacingOccurrences(of: "▁", with: "")
         if isBoundary(t.token) || out.isEmpty {
             out.append([piece.trimmingCharacters(in: .whitespaces), max(0, t.startTime - leadS), max(0, t.endTime - leadS)])
         } else {

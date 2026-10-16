@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { isTurn, type Word } from '../asr/localAgreement';
+import { isPunctuation, isTurn, type Word } from '../asr/localAgreement';
 
 export interface Segment { id?: number; startMs: number; endMs: number; text: string }
 export interface SessionRow {
@@ -100,7 +100,8 @@ export class TranscriptStore extends EventEmitter {
       if (!text) continue;
       const s = Math.round(w.start / SR_PER_MS), e = Math.round(w.end / SR_PER_MS);
       if (!this.open) this.open = { startMs: s, endMs: e, words: [] };
-      this.open.words.push(text);
+      if (isPunctuation(text) && this.open.words.length) this.open.words[this.open.words.length - 1] += text;
+      else this.open.words.push(text);
       this.open.endMs = Math.max(this.open.endMs, e);
       this.current.words++;
       if (this.open.words.length >= MAX_SEGMENT_WORDS || this.open.endMs - this.open.startMs >= MAX_SEGMENT_MS) this.closeSegment();

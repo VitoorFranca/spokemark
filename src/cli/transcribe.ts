@@ -4,6 +4,8 @@
 //        --wav file.wav       feed a file at real-time pace instead of capturing (nothing is played)
 //        --speakers <dir>     mark speaker changes with speaker-worker (the speaker model folder)
 //        --engine whisper|apple|parakeet   recognition engine (default whisper)
+//        --translate <lang>   live translation as in the overlay; reports how long each finished
+//                             sentence took to show translated
 import { readFileSync, writeFileSync } from 'node:fs';
 import { wer } from '../shared/wer';
 import { TURN_TEXT } from '../main/asr/localAgreement';
@@ -18,6 +20,8 @@ import { DEFAULT_WHISPER_OPTIONS, WhisperProvider } from '../main/asr/WhisperPro
 import { PARAKEET_MODEL_DIR } from '../main/models/ModelManager';
 import { binDir, modelPath, modelsDir, vadModelPath, type ModelId } from '../main/paths';
 import { SubtitleManager } from '../main/subtitles/SubtitleManager';
+import { SentenceTranslator } from '../main/translate/SentenceTranslator';
+import { TranslatorService } from '../main/translate/TranslatorService';
 
 const args = process.argv.slice(2);
 const arg = (k: string, d: string) => { const i = args.indexOf(`--${k}`); return i >= 0 ? args[i + 1]! : d; };
@@ -30,6 +34,7 @@ const ref = arg('ref', '');
 const wavFile = arg('wav', '');
 const speakerDir = arg('speakers', '');
 const engine = arg('engine', 'whisper');
+const translateTo = arg('translate', '');
 
 const t0 = process.hrtime.bigint();
 const ms = (ns: bigint) => Number(ns - t0) / 1e6;
@@ -49,10 +54,24 @@ const whisper = engine !== 'whisper' ? null : new WhisperProvider(pipeline.ring,
 const provider = whisper ?? new StreamingEngineProvider(engine === 'apple'
   ? { name: 'speech-worker', binPath: path.join(binDir(), 'speech-worker'), args: [] }
   : { name: 'parakeet-worker', binPath: path.join(binDir(), 'parakeet-worker'), args: ['--model-dir', path.join(modelsDir(), PARAKEET_MODEL_DIR)] });
-const subs = new SubtitleManager({ maxCharsPerLine: 60, maxLines: wavFile ? 500 : 3 }); // a file run keeps every line for the summary
+// a file run keeps every line for the summary, unless it measures translation (then like the overlay: 3 lines of 64)
+const subs = new SubtitleManager({ maxCharsPerLine: 64, maxLines: wavFile && !translateTo ? 500 : 3 });
 const speakers = speakerDir ? new SpeakerWorkerClient(path.join(binDir(), 'speaker-worker'), speakerDir) : null;
 const attributor = speakers ? new SpeakerAttributor() : null;
 const speakerSpans: SpeakerSpan[] = [];
+// Translation timing: a sentence is "done" when its last word is confirmed; it is "translated"
+// when the overlay's pairs first hold a source containing it.
+const translatorSvc = translateTo ? new TranslatorService() : null;
+const live = translatorSvc ? new SentenceTranslator((t, l) => translatorSvc.translate(t, l), translateTo) : null;
+const sentences: { text: string; doneNs: bigint; shownNs: bigint | null }[] = [];
+let sentence: string[] = [];
+const norm = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trim();
+live?.on('translation', (t: { pairs: { source: string; text: string }[] }) => {
+  const now = process.hrtime.bigint();
+  const srcs = t.pairs.filter((p) => p.text.trim()).map((p) => norm(p.source));
+  for (const s of sentences) if (s.shownNs === null && srcs.some((x) => x.includes(norm(s.text)))) s.shownNs = now;
+});
+
 
 const events: unknown[] = [];
 const confirmedWords: { p: number; text: string; startS: number; endS: number; latencyMs: number | null; atMs: number }[] = [];
@@ -97,6 +116,7 @@ provider.on('update', (u: TranscriptUpdate) => onUpdate(attributor ? attributor.
 function onUpdate(u: TranscriptUpdate | null): void {
   if (!u) return;
   subs.apply(u);
+  live?.apply(u);
   const now = process.hrtime.bigint();
   const real = (ws: { text: string }[]) => ws.filter((w) => w.text !== TURN_TEXT && w.text.trim());
   const conf = real(u.confirmed), prov = real(u.provisional);
@@ -106,6 +126,10 @@ function onUpdate(u: TranscriptUpdate | null): void {
     if (c !== null) shownLatency.push(Number(seen - c) / 1e6);
   }
   for (const w of u.confirmed) {
+    if (live && w.text !== TURN_TEXT) {
+      sentence.push(w.text.trim());
+      if (/[.?!]["')\]]*$/.test(w.text.trim())) { sentences.push({ text: sentence.join(' '), doneNs: now, shownNs: null }); sentence = []; }
+    } else if (live) sentence = [];
     const c = pipeline.captureTimeOf(w.end);
     const lat = c !== null ? Number(now - c) / 1e6 : null;
     if (lat !== null && w.text !== TURN_TEXT) wordLatency.push(lat);
@@ -166,7 +190,7 @@ async function main() {
   // let the last inference land
   await new Promise((r) => setTimeout(r, 2500));
   onUpdate(attributor?.flush() ?? null);
-  await Promise.all([provider.stop(), speakers?.stop()]);
+  await Promise.all([provider.stop(), speakers?.stop(), translatorSvc?.stop()]);
   const summary = {
     engine, model: engine === 'whisper' ? model : engine, seconds, stepMs, usePrompt,
     metal: provider.metalInitialized,
@@ -177,6 +201,11 @@ async function main() {
     confirmedLatencyMs: { p50: pct(wordLatency, 50), p95: pct(wordLatency, 95), n: wordLatency.length },
     firstSeenLatencyMs: { p50: pct(firstSeenLatency, 50), p95: pct(firstSeenLatency, 95), n: firstSeenLatency.length },
     shownLatencyMs: { p50: pct(shownLatency, 50), p95: pct(shownLatency, 95), n: shownLatency.length },
+    translation: live ? (() => {
+      const lag = sentences.filter((s) => s.shownNs !== null).map((s) => Number(s.shownNs! - s.doneNs) / 1e6);
+      return { target: translateTo, sentences: sentences.length, translated: lag.length, lagMs: { p50: pct(lag, 50), p95: pct(lag, 95), max: lag.length ? Math.max(...lag) : null }, requests: live.stats.requests,
+        missed: sentences.filter((s) => s.shownNs === null).map((s) => s.text) };
+    })() : undefined,
     inferMs: { p50: pct(provider.stats.inferMs, 50), p95: pct(provider.stats.inferMs, 95), n: provider.stats.inferMs.length },
     captureToMainMs: { p50: pct(clockSkew, 50), p95: pct(clockSkew, 95) },
     stats: { ...provider.stats, inferMs: undefined, vadMaxInflight: whisper?.vad.maxInflight },

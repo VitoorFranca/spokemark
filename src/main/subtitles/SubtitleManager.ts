@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { isTurn, normalizeWord, type Word } from '../asr/localAgreement';
+import { isPunctuation, isTurn, normalizeWord, type Word } from '../asr/localAgreement';
 import type { TranscriptUpdate } from '../asr/TranscriptionProvider';
 
 export interface SubtitleLine {
@@ -102,6 +102,10 @@ export class SubtitleManager extends EventEmitter {
 
   private appendCommitted(word: string): void {
     if (!word) return;
+    if (isPunctuation(word) && this.openCommitted.length && this.openCommitted[this.openCommitted.length - 1] !== '–') {
+      this.openCommitted[this.openCommitted.length - 1] += word;
+      return;
+    }
     const cur = this.openCommitted.join(' ');
     if (cur.length > 0 && cur.length + 1 + word.length > this.opts.maxCharsPerLine) {
       this.closed.push({ id: this.openId, committed: cur, provisional: '' });

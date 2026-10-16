@@ -22,7 +22,7 @@ import type { SubtitleView } from './subtitles/SubtitleManager';
 import { WindowManager } from './ui/WindowManager';
 import { SourceAppTracker, type SourceDetail } from './SourceApp';
 import { matchLanguage } from '../shared/lang';
-import { LiveTranslator, viewSegments } from './translate/LiveTranslator';
+import { SentenceTranslator } from './translate/SentenceTranslator';
 import { TranslatorService, type TargetLanguage } from './translate/TranslatorService';
 
 // ---- identity & data location (before 'ready') ------------------------------
@@ -56,7 +56,7 @@ let historyRevision = 0;
 let shortcutErrors: AppStateMsg['shortcutErrors'] = [];
 let provisionalText = '';
 let translator: TranslatorService;
-let liveTranslator: LiveTranslator;
+let liveTranslator: SentenceTranslator;
 let translationLanguages: TargetLanguage[] = [];
 const sourceTracker = new SourceAppTracker();
 let currentSource: string | null = null;
@@ -272,6 +272,7 @@ async function stopCaptions(): Promise<{ ok: boolean }> {
   await captions.stop();
   if (wasPaused) { store.endSession(); provisionalText = ''; sendTailSoon(); sourceTracker.reset(); currentSource = null; }
   captions.clearView();
+  liveTranslator.clear();
   overlay.setExtra({ source: null, translation: '', pairs: [] });
   if (!overlay.isEditMode) overlay.hide(); // only for now: the overlayVisible setting is unchanged
   broadcast();
@@ -510,7 +511,7 @@ app.whenReady().then(async () => {
   // ---- live translation (on-device; the helper runs only while translation is on) ----
   translator = new TranslatorService();
   translator.on('log', log);
-  liveTranslator = new LiveTranslator((text, target) => translator.translate(text, target), s0.translationTarget);
+  liveTranslator = new SentenceTranslator((text, target) => translator.translate(text, target), s0.translationTarget);
   liveTranslator.on('translation', (t: { text: string; pairs: { source: string; text: string }[] }) => overlay.setExtra({ translation: t.text, pairs: t.pairs }));
   const syncTranslator = () => {
     const st = settings.get();
@@ -518,11 +519,11 @@ app.whenReady().then(async () => {
     else { liveTranslator.stop(); overlay.setExtra({ translation: '', pairs: [] }); void translator.stop(); }
   };
   syncTranslator();
-  captions.on('view', (v: SubtitleView) => {
-    if (!settings.get().translationEnabled) return;
-    // translate the caption currently on screen (confirmed + provisional), one segment per speaker
-    liveTranslator.updateSegments(viewSegments(v.lines));
+  captions.on('update', (u: TranscriptUpdate) => {
+    // translate the transcript sentence by sentence (not the lines on screen), one turn per speaker
+    if (settings.get().translationEnabled) liveTranslator.apply(u);
   });
+  captions.on('session', (what: 'started' | 'ended') => { if (what === 'started' && !paused) liveTranslator.clear(); });
 
   // ---- source app shown above the captions (real icon) ----
   const updateSource = async (details: SourceDetail[]) => {

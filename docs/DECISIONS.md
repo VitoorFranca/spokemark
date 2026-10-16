@@ -93,6 +93,8 @@ Each entry lists what was chosen, the alternatives that were discarded, and why.
 
 ## Translation
 
+**By sentence, from the transcript (October 2026).** The first version translated the caption lines on screen, again on every change. Measured on files fed at real time (Parakeet engine): finished sentences took up to 2.2 s to show translated in dialogues, and in a monologue with long sentences 3 of 5 never showed whole, because the start of a long sentence scrolls off and the text sent kept changing. Now `SentenceTranslator` follows the transcript: a finished sentence (punctuation, end of utterance, speaker change or 30 words) is translated once, ahead of anything else, and kept; only the sentence in progress is re-translated, at most every 350 ms. Each speaker turn keeps its last two sentences, and the overlay matches turns to the speaker groups on screen from the newest one, so scrolling never shifts them. Result on the same files: every sentence translated, 0.28–0.41 s p50, under 0.5 s worst case.
+
 **Chosen: Apple's Translation framework in a Swift helper (`native/translator`)**, `TranslationSession(installedSource:target:)` (macOS 26+, no SwiftUI needed). On-device, free, no network, uses the language packs installed in System Settings; weak-linked so the app still runs on macOS 14.2 (translation is then shown as unavailable).
 - Discarded: Whisper's `translate` task (only into English); local MT models (NLLB/Marian via ONNX — large downloads and a new runtime); any cloud API (breaks the "nothing leaves the Mac" promise).
 - The visible caption (confirmed + provisional) is translated with one request in flight, latest-wins and a bounded cache (`LiveTranslator`).

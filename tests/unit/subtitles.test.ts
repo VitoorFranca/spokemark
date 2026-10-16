@@ -158,3 +158,14 @@ describe('speaker turns (tinydiarize)', () => {
     expect(m.committedText).toBe('a b c');
   });
 });
+
+describe('late punctuation', () => {
+  it('a "." sent on its own joins the word before it on screen', async () => {
+    const { SubtitleManager } = await import('../../src/main/subtitles/SubtitleManager');
+    const m = new SubtitleManager({ maxLines: 3, maxCharsPerLine: 64 });
+    const w = (text: string, s: number) => ({ text: ` ${text}`, start: s * 1600, end: s * 1600 + 1000, p: 1 });
+    m.apply({ confirmed: [w('next', 0), w('sprint', 1)], provisional: [], windowEnd: 0, inferMs: 0, resultNs: 0n, utteranceEnd: false });
+    m.apply({ confirmed: [w('.', 2)], provisional: [], windowEnd: 0, inferMs: 0, resultNs: 0n, utteranceEnd: true });
+    expect(m.committedText).toBe('next sprint.');
+  });
+});

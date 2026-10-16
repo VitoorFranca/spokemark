@@ -122,8 +122,8 @@ export function CaptionBox({ look, lines, children, source, translation, pairs, 
         {interleaved ? (
           // one column: each speaker's lines, then its translation; the same total height as the two blocks
           <div className="flex flex-col justify-end overflow-hidden" style={{ ...css.text, height: `${(look.maxLines + translationLines * 0.86) * css.lineHeight}em` }}>
-            {speakerGroups(lines).map((g) => {
-              const tr = translationFor(g.text, pairs!);
+            {speakerGroups(lines).map((g, i, all) => {
+              const tr = translationFor(i, all.length, pairs!);
               return (
                 <Fragment key={g.lines[0]!.id}>
                   {g.lines.map((l) => <Line key={l.id} committed={l.committed} provisional={l.provisional} />)}
@@ -149,7 +149,7 @@ export function CaptionBox({ look, lines, children, source, translation, pairs, 
   );
 }
 
-/** Caption lines grouped by speaker: a line starting with "–" starts a new speaker (as in viewSegments). */
+/** Caption lines grouped by speaker: a line starting with "–" starts a new speaker (as in SentenceTranslator turns). */
 export function speakerGroups(lines: CaptionLine[]): { lines: CaptionLine[]; text: string; turn: boolean }[] {
   const groups: { lines: CaptionLine[]; text: string; turn: boolean }[] = [];
   for (const l of lines) {
@@ -164,15 +164,11 @@ export function speakerGroups(lines: CaptionLine[]): { lines: CaptionLine[]; tex
 }
 
 /**
- * The translation of one speaker's text: the pair for exactly that text, else the one for
- * the longest earlier version of it (the text grew and its new translation is on the way).
+ * The translation under speaker group `i` of `n` on screen. Translations come one per turn,
+ * oldest first, and the newest turn is always the last group, so they are matched from the
+ * end: lines scrolling off the top never shift them.
  */
-export function translationFor(text: string, pairs: { source: string; text: string }[]): string | null {
-  if (!text) return null;
-  let best: { source: string; text: string } | null = null;
-  for (const p of pairs) {
-    if (p.source === text) return p.text;
-    if (text.startsWith(p.source) && (!best || p.source.length > best.source.length)) best = p;
-  }
-  return best?.text ?? null;
+export function translationFor(i: number, n: number, pairs: { source: string; text: string }[]): string | null {
+  const p = pairs[pairs.length - (n - i)];
+  return p?.text || null;
 }

@@ -13,6 +13,9 @@ export interface Word {
 export const TURN_TEXT = ' ⟪SPEAKERTURN⟫';
 export const isTurn = (w: { text: string }): boolean => w.text === TURN_TEXT;
 
+/** A "word" that is only punctuation (some engines send a late "." on its own): it joins the word before it. */
+export const isPunctuation = (t: string): boolean => /^[\p{P}]+$/u.test(t.trim());
+
 export function normalizeWord(t: string): string {
   return t.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
 }
