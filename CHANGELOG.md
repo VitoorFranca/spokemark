@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-15
+
 ### Added
 - **Three recognition engines** (Settings › Transcription › Recognition engine): **Parakeet** (NVIDIA Nemotron Speech Streaming on the Neural Engine, 626 MB, the new default), **Apple** (macOS 26's on-device speech recognition; macOS installs its model) and **Whisper** (as before). In our comparison Parakeet had the fewest errors (0.4 % vs 2.6 % Whisper, 3.5 % Apple), settled words fastest and used no GPU. Existing installs keep Whisper until you switch.
 
@@ -56,6 +58,6 @@ First public release. Unsigned (ad-hoc) build for Apple Silicon, macOS 14.2+.
 - English and Portuguese (Brazil) interface.
 - Release workflow producing `.dmg`/`.zip` and SHA-256 checksums.
 
-[Unreleased]: https://github.com/VitoorFranca/spokemark/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/VitoorFranca/spokemark/compare/v0.4.0...HEAD
 [0.1.1]: https://github.com/VitoorFranca/spokemark/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/VitoorFranca/spokemark/releases/tag/v0.1.0
