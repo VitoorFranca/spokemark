@@ -177,3 +177,15 @@ Removed in v3: "Every byte, on your Mac" (overclaims: the model download is netw
 | Speaker changes are a setting of their own; one model supports them; the app says when yours doesn't; translation follows the turns | CHANGELOG 0.3.0; `src/shared/models.ts` (`TURN_MODELS`, `speakerChangesActive`); `src/main/translate/LiveTranslator.ts` (`viewSegments`) |
 | Pause keeps the last captions on screen; Stop hides them | CHANGELOG 0.3.0; `src/main/main.ts` (`pauseCaptions`, `stopCaptions`); `tests/ui/app.spec.mjs` |
 | Same look as the site, dark by default, light and system options | CHANGELOG 0.3.0; `src/shared/settings.ts` (`appearance`) |
+
+## v0.4.0 update (2026-10-15)
+
+| Claim on the page | Source |
+|---|---|
+| Version 0.4.0, released 2026-10-15, .dmg 149 MB (148,983,293 bytes) | `gh release view v0.4.0` |
+| Speech model 626 MB (Parakeet, the default engine) | `src/main/models/ModelManager.ts` (`PARAKEET_FILES`, 625,837,419 bytes) |
+| "a speech model running on your Mac", "on the Neural Engine", Parakeet / Apple / Whisper engines | `src/shared/settings.ts` (`ENGINE_IDS`, default `parakeet`); `native/fluid-workers/Sources/parakeet-worker`; `native/speech-worker` |
+| Parakeet made fewer errors in our file comparison (0.4 % vs 2.6 %) | `docs/RESULTS.md` §2b |
+| The 30-minute metrics (0.45 s, 2.3 %, 0 words in 621 s of silence, 179 ms, 32 ms, 1.3 s) are the Whisper engine, base.en | `docs/RESULTS.md` §3 (labelled on the page) |
+| Speaker model tells voices apart on the Neural Engine with any engine; translation under each speaker; nothing about voices saved | `docs/DECISIONS.md` (speaker changes); `src/main/speakers/`; `src/main/translate/SentenceTranslator.ts`; `src/renderer/shared/CaptionBox.tsx` |
+| Pipeline rows: recognize as it streams (Parakeet), tell speakers apart (optional), translate each finished sentence (optional) | `src/main/asr/StreamingEngineProvider.ts`; `src/main/speakers/SpeakerAttributor.ts`; `src/main/translate/SentenceTranslator.ts` |
