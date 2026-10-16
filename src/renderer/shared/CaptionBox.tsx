@@ -1,5 +1,5 @@
 // Caption rendering shared by the overlay and the Settings preview.
-import { memo, useEffect, useRef, type ReactNode } from 'react';
+import { Fragment, memo, useEffect, useRef, type ReactNode } from 'react';
 import { captionCss, type CaptionLook } from '../../shared/captionStyle';
 import { translationLineCount } from '../../shared/models';
 
@@ -86,12 +86,14 @@ export function Waves({ level }: { level: { current: number } }) {
   return <canvas ref={canvas} aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[38%] w-full" />;
 }
 
-export function CaptionBox({ look, lines, children, source, translation, translationEnabled, translationMode, speakerTurns, showSourceApp, waves, level }: {
+export function CaptionBox({ look, lines, children, source, translation, pairs, translationEnabled, translationMode, speakerTurns, showSourceApp, waves, level }: {
   look: CaptionLook;
   lines: CaptionLine[];
   children?: ReactNode;
   source?: CaptionSource | null;
   translation?: string;
+  /** Each speaker's text with its translation: with speaker changes, the translation goes right under its speaker. */
+  pairs?: { source: string; text: string }[];
   translationEnabled?: boolean;
   translationMode?: 'both' | 'translation';
   /** Speaker changes active: the translation has one line per speaker ("– …"). */
@@ -105,6 +107,8 @@ export function CaptionBox({ look, lines, children, source, translation, transla
   const onlyTranslation = translationEnabled && translationMode === 'translation' && !!translation;
   const translationLines = both ? translationLineCount(look.maxLines, !!speakerTurns) : 0;
   const withBox = look.opacity > 0;
+  const interleaved = both && !!speakerTurns && !!pairs && !children;
+  const trStyle = { fontSize: `${0.86}em`, fontWeight: 500, color: 'rgba(255,255,255,0.68)' };
   return (
     <div className="relative w-full overflow-hidden" style={{ ...css.box, ...(withBox ? { backgroundColor: `rgba(9,9,13,${look.opacity})` } : {}) }}>
       {waves && withBox && level && <Waves level={level} />}
@@ -115,6 +119,20 @@ export function CaptionBox({ look, lines, children, source, translation, transla
             <span className="truncate text-[14px] font-semibold text-white/60" style={{ textShadow: 'none' }}>{source.name}</span>
           </div>
         )}
+        {interleaved ? (
+          // one column: each speaker's lines, then its translation; the same total height as the two blocks
+          <div className="flex flex-col justify-end overflow-hidden" style={{ ...css.text, height: `${(look.maxLines + translationLines * 0.86) * css.lineHeight}em` }}>
+            {speakerGroups(lines).map((g) => {
+              const tr = translationFor(g.text, pairs!);
+              return (
+                <Fragment key={g.lines[0]!.id}>
+                  {g.lines.map((l) => <Line key={l.id} committed={l.committed} provisional={l.provisional} />)}
+                  {tr && <div className="whitespace-pre-wrap break-words" style={trStyle}>{g.turn ? `– ${tr}` : tr}</div>}
+                </Fragment>
+              );
+            })}
+          </div>
+        ) : <>
         <div className="flex flex-col justify-end overflow-hidden" style={{ ...css.text, height: `${look.maxLines * css.lineHeight}em` }}>
           {children ?? (onlyTranslation
             ? translation!.split('\n').map((l, i) => <div key={i} className="caption-line whitespace-pre-wrap break-words">{l}</div>)
@@ -125,7 +143,36 @@ export function CaptionBox({ look, lines, children, source, translation, transla
             {translation ? translation.split('\n').map((l, i) => <div key={i} className="whitespace-pre-wrap break-words">{l}</div>) : null}
           </div>
         )}
+        </>}
       </div>
     </div>
   );
+}
+
+/** Caption lines grouped by speaker: a line starting with "–" starts a new speaker (as in viewSegments). */
+export function speakerGroups(lines: CaptionLine[]): { lines: CaptionLine[]; text: string; turn: boolean }[] {
+  const groups: { lines: CaptionLine[]; text: string; turn: boolean }[] = [];
+  for (const l of lines) {
+    const text = [l.committed, l.provisional].filter(Boolean).join(' ').trim();
+    const turn = /^–(\s|$)/.test(text);
+    const body = turn ? text.replace(/^–\s*/, '') : text;
+    const last = groups[groups.length - 1];
+    if (turn || !last) groups.push({ lines: [l], text: body, turn });
+    else { last.lines.push(l); last.text = [last.text, body].filter(Boolean).join(' '); }
+  }
+  return groups;
+}
+
+/**
+ * The translation of one speaker's text: the pair for exactly that text, else the one for
+ * the longest earlier version of it (the text grew and its new translation is on the way).
+ */
+export function translationFor(text: string, pairs: { source: string; text: string }[]): string | null {
+  if (!text) return null;
+  let best: { source: string; text: string } | null = null;
+  for (const p of pairs) {
+    if (p.source === text) return p.text;
+    if (text.startsWith(p.source) && (!best || p.source.length > best.source.length)) best = p;
+  }
+  return best?.text ?? null;
 }

@@ -23,7 +23,7 @@ export class OverlayManager extends EventEmitter {
   private status: Pick<Appearance, 'status' | 'statusText'> = { status: 'idle', statusText: '' };
   editHint = '';
   private lastView: SubtitleViewMsg = { version: 0, lines: [] };
-  private extra: OverlayExtra = { source: null, translation: '' };
+  private extra: OverlayExtra = { source: null, translation: '', pairs: [] };
   private saveTimer: NodeJS.Timeout | null = null;
 
   /** The speaker-change model is installed (speaker turns then work with every model). */

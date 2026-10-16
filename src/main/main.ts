@@ -258,7 +258,7 @@ async function stopCaptions(): Promise<{ ok: boolean }> {
   await captions.stop();
   if (wasPaused) { store.endSession(); provisionalText = ''; sendTailSoon(); sourceTracker.reset(); currentSource = null; }
   captions.clearView();
-  overlay.setExtra({ source: null, translation: '' });
+  overlay.setExtra({ source: null, translation: '', pairs: [] });
   if (!overlay.isEditMode) overlay.hide(); // only for now: the overlayVisible setting is unchanged
   broadcast();
   return { ok: true };
@@ -483,11 +483,11 @@ app.whenReady().then(async () => {
   translator = new TranslatorService();
   translator.on('log', log);
   liveTranslator = new LiveTranslator((text, target) => translator.translate(text, target), s0.translationTarget);
-  liveTranslator.on('translation', (t: { text: string }) => overlay.setExtra({ translation: t.text }));
+  liveTranslator.on('translation', (t: { text: string; pairs: { source: string; text: string }[] }) => overlay.setExtra({ translation: t.text, pairs: t.pairs }));
   const syncTranslator = () => {
     const st = settings.get();
     if (st.translationEnabled) { void translator.start().then(() => broadcast()); liveTranslator.setTarget(st.translationTarget); }
-    else { liveTranslator.stop(); overlay.setExtra({ translation: '' }); void translator.stop(); }
+    else { liveTranslator.stop(); overlay.setExtra({ translation: '', pairs: [] }); void translator.stop(); }
   };
   syncTranslator();
   captions.on('view', (v: SubtitleView) => {
@@ -522,7 +522,7 @@ app.whenReady().then(async () => {
   captions.on('session', (what: 'started' | 'ended') => {
     // a pause keeps the session (and the frozen captions) until resume or stop
     if (what === 'started') { if (store.liveStartedAt === null) { store.persist = settings.get().historyEnabled; store.startSession(settings.get().model); provisionalText = ''; sendLive(liveReset()); } }
-    else if (!paused) { store.endSession(); provisionalText = ''; sendTailSoon(); sourceTracker.reset(); currentSource = null; overlay.setExtra({ source: null, translation: '' }); }
+    else if (!paused) { store.endSession(); provisionalText = ''; sendTailSoon(); sourceTracker.reset(); currentSource = null; overlay.setExtra({ source: null, translation: '', pairs: [] }); }
   });
   captions.on('update', (u: TranscriptUpdate) => {
     store.addConfirmed(u.confirmed, u.utteranceEnd);
@@ -627,7 +627,9 @@ app.whenReady().then(async () => {
       overlayPid: () => overlay.win?.webContents.getOSProcessId() ?? null,
       // same path as a detected source (real icon via getFileIcon), without playing audio
       setSourceForTest: (name: string, appPath: string) => updateSource([{ name, path: appPath, frontmost: true }]),
-      setTranslationForTest: (text: string) => overlay.setExtra({ translation: text }),
+      setTranslationForTest: (text: string, pairs: { source: string; text: string }[] = []) => overlay.setExtra({ translation: text, pairs }),
+      // caption lines on the overlay without audio (same path as the pipeline's views)
+      setViewForTest: (lines: { committed: string; provisional?: string }[]) => overlay.sendView({ version: Date.now(), lines: lines.map((l, i) => ({ id: i + 1, committed: l.committed, provisional: l.provisional ?? '' })) }),
       translationStats: () => ({ ...liveTranslator.stats, source: currentSource }),
       toggleCaptions: () => toggleCaptions(),
       setOverlayEdit: (on: boolean) => setEditMode(on),

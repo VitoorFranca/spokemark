@@ -12,7 +12,7 @@ export interface Segment { text: string; turn: boolean }
  * - results are cached (bounded) so confirmed text is never translated twice
  * - with speaker changes, each speaker's text is translated on its own and shown on its own
  *   line with a leading dash, so the translation keeps the same turns as the original
- * Events: 'translation'({ text, source })
+ * Events: 'translation'({ text, source, pairs: { source, text }[] per speaker segment })
  */
 export class LiveTranslator extends EventEmitter {
   private inflight = false;
@@ -42,9 +42,9 @@ export class LiveTranslator extends EventEmitter {
   /** New on-screen text split by speaker. */
   updateSegments(segments: Segment[]): void {
     const segs = segments.map((g) => ({ text: g.text.trim(), turn: g.turn })).filter((g) => g.text);
-    if (!segs.length) { this.pending = null; this.show('', ''); return; }
+    if (!segs.length) { this.pending = null; this.show(segs, []); return; }
     const hits = segs.map((g) => this.cache.get(this.key(g.text)));
-    if (hits.every((h) => h !== undefined)) { this.stats.cacheHits++; this.pending = null; this.show(compose(segs, hits as string[]), source(segs)); return; }
+    if (hits.every((h) => h !== undefined)) { this.stats.cacheHits++; this.pending = null; this.show(segs, hits as string[]); return; }
     if (this.pending !== null) this.stats.dropped++;
     this.pending = segs;
     this.schedule();
@@ -80,7 +80,7 @@ export class LiveTranslator extends EventEmitter {
         outs.push(out);
       }
       // only show it if nothing newer replaced it in the meantime
-      if (this.pending === null) this.show(compose(segs, outs), source(segs));
+      if (this.pending === null) this.show(segs, outs);
     } catch {
       this.stats.errors++;
     } finally {
@@ -89,10 +89,11 @@ export class LiveTranslator extends EventEmitter {
     }
   }
 
-  private show(text: string, source: string): void {
+  private show(segs: Segment[], outs: string[]): void {
+    const text = compose(segs, outs);
     if (text === this.lastShown) return;
     this.lastShown = text;
-    this.emit('translation', { text, source });
+    this.emit('translation', { text, source: source(segs), pairs: segs.map((g, i) => ({ source: g.text, text: outs[i]! })) });
   }
 
   stop(): void {

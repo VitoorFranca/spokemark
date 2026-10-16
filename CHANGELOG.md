@@ -8,6 +8,7 @@ All notable changes to this project are documented here. The format is based on
 
 ### Changed
 - **Speaker changes work with every speech model.** A separate speaker model (NVIDIA Nemotron 3 Diarization, 199 MB, downloaded from Settings › Transcription) listens to the same audio and tells voices apart on the Neural Engine; each confirmed word goes to the voice heard over it, and a new line with a dash starts when the voice changes. On test dialogues it found every change at the right word, where the previous model found none. Captions appear on screen as fast as before; confirmed words settle about 0.1 s later. Nothing about voices is saved: speakers are told apart only within a session. The *Enhanced · speakers* model keeps working as before when the speaker model isn't installed.
+- **Translation under each speaker.** With speaker changes and "original + translation", each speaker's line is followed right away by its translation, instead of all translations in a block below.
 
 ## [0.3.0] - 2026-10-15
 

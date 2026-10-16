@@ -159,3 +159,29 @@ describe('speaker changes and translation', () => {
     expect(translationLineCount(3, true)).toBe(3);
   });
 });
+
+import { speakerGroups, translationFor } from '../../src/renderer/shared/CaptionBox';
+
+describe('translation under each speaker', () => {
+  const L = (id: number, committed: string, provisional = '') => ({ id, committed, provisional });
+
+  it('groups caption lines by speaker, joining wrapped lines', () => {
+    const g = speakerGroups([L(1, 'hi'), L(2, '– how are'), L(3, 'you', 'today')]);
+    expect(g.map((x) => [x.text, x.turn, x.lines.length])).toEqual([['hi', false, 1], ['how are you today', true, 2]]);
+  });
+
+  it('pairs each speaker with its translation, or the latest one while the text grows', () => {
+    const pairs = [{ source: 'hi', text: 'oi' }, { source: 'how are', text: 'como estão' }];
+    expect(translationFor('hi', pairs)).toBe('oi');
+    expect(translationFor('how are you', pairs)).toBe('como estão');
+    expect(translationFor('bye', pairs)).toBeNull();
+  });
+
+  it('the translator reports one pair per speaker segment', async () => {
+    const { LiveTranslator } = await import('../../src/main/translate/LiveTranslator');
+    const lt = new LiveTranslator(async (t) => ({ hi: 'oi', 'how are you': 'como está você?' })[t] ?? t, 'pt-BR', 0);
+    const got = new Promise<{ pairs: { source: string; text: string }[] }>((r) => lt.once('translation', r));
+    lt.updateSegments([{ text: 'hi', turn: false }, { text: 'how are you', turn: true }]);
+    expect((await got).pairs).toEqual([{ source: 'hi', text: 'oi' }, { source: 'how are you', text: 'como está você?' }]);
+  });
+});

@@ -46,6 +46,8 @@ export type Appearance = z.infer<typeof AppearanceSchema>;
 export const OverlayExtraSchema = z.object({
   source: z.object({ name: z.string().max(120), icon: z.string().max(400_000).nullable() }).nullable(),
   translation: z.string().max(4000),
+  /** Each speaker's on-screen text with its translation, so the overlay can put the translation right under it. */
+  pairs: z.array(z.object({ source: z.string().max(4000), text: z.string().max(4000) })).max(24),
 });
 export type OverlayExtra = z.infer<typeof OverlayExtraSchema>;
 
